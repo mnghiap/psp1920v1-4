@@ -66,6 +66,8 @@ dkms.conf
 [Dd]ebug/
 [Rr]elease/
 
+bin/
+
 #Build Results
 *.o
 *.d
