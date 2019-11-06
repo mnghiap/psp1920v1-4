@@ -3,10 +3,10 @@
 #include <avr/interrupt.h>
 
 //! Global variables
-uint8_t hours = 12;
-uint8_t minutes = 0;
-uint8_t seconds = 0;
-uint16_t milliseconds = 0;
+volatile uint8_t hours = 12;
+volatile uint8_t minutes = 0;
+volatile uint8_t seconds = 0;
+volatile uint16_t milliseconds = 0;
 
 /*!
  * \return The milliseconds counter of the current time.
@@ -77,7 +77,7 @@ void updateClock(void) {
 	}
 	if (minutes == 60){
 		minutes = 0;
-		hours = (hours + 1) % 13;
+        hours = (hours % 12) + 1;
 	}
 }
 

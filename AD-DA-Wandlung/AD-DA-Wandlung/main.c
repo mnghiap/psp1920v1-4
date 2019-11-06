@@ -28,15 +28,15 @@ uint8_t get_pinc0(){
 };
 
 void tracking(){
-	init_wandler();
-	do { 
-		PORTB += 1; //Inkrementiert
-		_delay_ms(50);
-		an_LED_ausgeben();
-	} while (get_pinc0() == 0); //Solange U_ref < U_mess
-	PORTB -= 1; // U_mess einmal ueberschritten
-	_delay_ms(50);
-	an_LED_ausgeben();
+    init_wandler();
+    do { 
+        PORTB += 1; //Inkrementiert
+        _delay_ms(50);
+        an_LED_ausgeben();
+    } while (get_pinc0() == 0); //Solange U_ref < U_mess
+    PORTB -= 1; // U_mess einmal ueberschritten
+    _delay_ms(50);
+    an_LED_ausgeben();
 }
 
 void sar(){
