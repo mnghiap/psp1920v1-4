@@ -16,7 +16,7 @@
  */
 
 uint8_t get_WaitingESC(){ // Get Zustand von ESC
-    if (os_getInput() & 0b1000 != 0) {
+    if ((os_getInput() & 0b1000) != 0) {
         os_waitForNoInput();
         return 1;
     }        
