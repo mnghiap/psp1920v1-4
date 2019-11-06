@@ -15,57 +15,59 @@
  *  Shows the string 'Hello World!' on the display.
  */
 
-uint8_t get_ESC(){ // Get Zustand von ESC
-	return (os_getInput() & 0b00001000) >> 3;
+uint8_t get_WaitingESC(){ // Get Zustand von ESC
+    if (os_getInput() & 0b1000 != 0) {
+        os_waitForNoInput();
+        return 1;
+    }        
+    return 0;
 }
 
 void helloWorld(void) {
     // Repeat until ESC gets pressed
-    while(get_ESC() == 0){ //ESC nicht gedrueckt
-		lcd_clear();
-		lcd_line1();
-		lcd_writeProgString(PSTR("Hallo Welt!"));
-		_delay_ms(500);
-		lcd_clear();
-		lcd_line1();
-		lcd_writeProgString(PSTR("Hallo Welt!"));
-		_delay_ms(500);
-	}
-	os_waitForNoInput();
-	showMenu();
+    while(get_WaitingESC() == 0){ //ESC nicht gedrueckt
+        lcd_clear();
+        lcd_line1();
+        lcd_writeProgString(PSTR("Hallo Welt!"));
+        _delay_ms(500);
+        lcd_clear();
+        lcd_line1();
+        lcd_writeProgString(PSTR("Hallo Welt!"));
+        _delay_ms(500);
+    }
 }
 /*!
- *	Zeige Zeiteinheit (Uhr, Minute, Sekunde) in gewuenschter Form %.2d
+ *	Zeige Zeiteinheit (Uhr, Minute, Sekunde) in gewuenschter Form %02d
  */
 
 void displayTimeUnit(uint16_t timeUnit) {
-	if(timeUnit == 0){
-		lcd_writeProgString(PSTR("00:"));
-	} else if (timeUnit < 10) {
-		lcd_writeProgString(PSTR("0"));
-		lcd_writeDec(timeUnit);
-		lcd_writeProgString(PSTR(":"));
-	} else {
-		lcd_writeDec(timeUnit);
-		lcd_writeProgString(PSTR(":"));
-	}
+    if(timeUnit == 0){
+        lcd_writeProgString(PSTR("00:"));
+    } else if (timeUnit < 10) {
+        lcd_writeProgString(PSTR("0"));
+        lcd_writeDec(timeUnit);
+        lcd_writeProgString(PSTR(":"));
+    } else {
+        lcd_writeDec(timeUnit);
+        lcd_writeProgString(PSTR(":"));
+    }
 }
 
 /*!
- *	Zeige Millisekunde in gewuenschter Form %.3d
+ *	Zeige Millisekunde in gewuenschter Form %03d
  */
 void displayMilliseconds(uint16_t ms) {
-	if(ms == 0){
-		lcd_writeProgString(PSTR("000"));
-	} else if (ms < 10) {
-		lcd_writeProgString(PSTR("00"));
-		lcd_writeDec(ms);
-	} else if (ms < 100) {
-		lcd_writeProgString(PSTR("0"));
-		lcd_writeDec(ms);
-	} else {
-		lcd_writeDec(ms);
-	}
+    if(ms == 0){
+        lcd_writeProgString(PSTR("000"));
+    } else if (ms < 10) {
+        lcd_writeProgString(PSTR("00"));
+        lcd_writeDec(ms);
+    } else if (ms < 100) {
+        lcd_writeProgString(PSTR("0"));
+        lcd_writeDec(ms);
+    } else {
+        lcd_writeDec(ms);
+    }
 }
 
 
@@ -73,24 +75,23 @@ void displayMilliseconds(uint16_t ms) {
  *  Shows the clock on the display and a binary clock on the led bar.
  */
 void displayClock(void) {
-	while(get_ESC() == 0){
-		uint16_t clockVal = 0;
-		uint16_t hours = getTimeHours(); //uint16_t fuer angenehmes Bitsetzen in clockVal
-		uint16_t minutes = getTimeMinutes();
-		uint16_t seconds = getTimeSeconds();
-		uint16_t milliseconds = getTimeMilliseconds();
-		clockVal |= seconds; // Setze Sekunde in clockVal, letzte 6 Bits
-		clockVal |= (minutes << 6); // Setze Minute in clockVal, 6 Bits vor Sekunde
-		clockVal |= (hours << 12); // Setze Stunde in clockVal, erste 4 Bits 
-		setLedBar(clockVal);
-		lcd_clear();
-		displayTimeUnit(hours);
-		displayTimeUnit(minutes);
-		displayTimeUnit(seconds);
-		displayMilliseconds(milliseconds);
-		_delay_ms(10); // Damit die Uhr sichtbar ist. Notwendig wegen hoher Ausfuehrungsgeschwindigkeit
-	}
-	showMenu();
+    while(get_WaitingESC() == 0){
+        uint16_t clockVal = 0;
+        uint16_t hours = getTimeHours(); //uint16_t fuer angenehmes Bitsetzen in clockVal
+        uint16_t minutes = getTimeMinutes();
+        uint16_t seconds = getTimeSeconds();
+        uint16_t milliseconds = getTimeMilliseconds();
+        clockVal |= seconds; // Setze Sekunde in clockVal, letzte 6 Bits
+        clockVal |= (minutes << 6); // Setze Minute in clockVal, 6 Bits vor Sekunde
+        clockVal |= (hours << 12); // Setze Stunde in clockVal, erste 4 Bits 
+        setLedBar(clockVal);
+        lcd_clear();
+        displayTimeUnit(hours);
+        displayTimeUnit(minutes);
+        displayTimeUnit(seconds);
+        displayMilliseconds(milliseconds);
+        _delay_ms(10); // Damit die Uhr sichtbar ist. Notwendig wegen hoher Ausfuehrungsgeschwindigkeit
+    }
 }
 
 /*!
