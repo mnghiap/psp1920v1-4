@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <util/delay.h>
 #include "lcd.h"
+#include <stdlib.h>
 
 //! Global variables
 uint16_t lastCaptured;
@@ -61,7 +62,7 @@ uint16_t getAdcValue() {
  * \return The size of the buffer which stores voltage values.
  */
 uint8_t getBufferSize() {
-    #warning IMPLEMENT STH. HERE
+    return bufferSize;
 }
 
 /*! \brief Returns the current index of the buffer which stores voltage values.
@@ -69,14 +70,26 @@ uint8_t getBufferSize() {
  * \return The current index of the buffer which stores voltage values.
  */
 uint8_t getBufferIndex() {
-    #warning IMPLEMENT STH. HERE
+    return bufferIndex;
 }
 
 /*! \brief Stores the last captured voltage.
  *
  */
 void storeVoltage(void) {
-    #warning IMPLEMENT STH. HERE
+    // init buffer if buffer_size = 0
+    if (bufferSize == 0) {
+        bufferStart = malloc(100 * sizeof(uint16_t));
+        bufferSize = 100;
+        bufferIndex = 0;
+    }
+
+    // write value to bufferIndex
+    if (bufferIndex < bufferSize) {
+        *(bufferStart + bufferIndex) = lastCaptured;
+        bufferIndex++;
+    }
+   
 }
 
 /*! \brief Returns the voltage value with the passed index.
@@ -85,5 +98,5 @@ void storeVoltage(void) {
  * \return      The voltage value with index ind.
  */
 uint16_t getStoredVoltage(uint8_t ind) {
-    #warning IMPLEMENT STH. HERE
+    return (ind < bufferIndex)?*(bufferStart + ind):0;
 }

@@ -7,16 +7,18 @@ uint16_t activateLedMask = 0xFFFF;
  *  Initializes the led bar. Note: All PORTs will be set to output.
  */
 void initLedBar(void) { // PORTA und PORTD als Ausgang
-    DDRA = 0b11111111;
-	DDRD = 0b11111111;
-	PORTA = 0b11111111;
-	PORTD = 0b11111111;
+
+    DDRA = activateLedMask & 0xFF;
+	DDRD = activateLedMask >> 8;
+	PORTA = activateLedMask & 0xFF;
+	PORTD = activateLedMask >> 8;
 }
 
 /*!
  *  Sets the passed value as states of the led bar (1 = on, 0 = off).
  */
 void setLedBar(uint16_t value) {
-    PORTA = ~(value & 0b0000000011111111); // Letzte 8 Bits
+    value &= activateLedMask;
+    PORTA = ~(value & 0xFF); // Letzte 8 Bits
 	PORTD = ~(value >> 8); // Erste 8 Bits
 }

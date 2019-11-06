@@ -33,7 +33,7 @@
         <documentation help="" />
         <offline-documentation help="" />
         <dependencies>
-          <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.34.1" />
+          <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.39.0" />
         </dependencies>
       </framework-data>
     </AsfFrameworkConfig>
@@ -41,7 +41,7 @@
     <ResetRule>0</ResetRule>
     <EraseKey />
     <avrtool>com.atmel.avrdbg.tool.jtagice3plus</avrtool>
-    <avrtoolserialnumber>J30200024374</avrtoolserialnumber>
+    <avrtoolserialnumber>J30200042792</avrtoolserialnumber>
     <avrdeviceexpectedsignature>0x1E9609</avrdeviceexpectedsignature>
     <com_atmel_avrdbg_tool_jtagice3plus>
       <ToolOptions>
@@ -51,7 +51,7 @@
         <InterfaceName>JTAG</InterfaceName>
       </ToolOptions>
       <ToolType>com.atmel.avrdbg.tool.jtagice3plus</ToolType>
-      <ToolNumber>J30200024374</ToolNumber>
+      <ToolNumber>J30200042792</ToolNumber>
       <ToolName>JTAGICE3</ToolName>
     </com_atmel_avrdbg_tool_jtagice3plus>
     <avrtoolinterface>JTAG</avrtoolinterface>
