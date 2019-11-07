@@ -5,6 +5,7 @@
 #include "os_input.h"
 
 #include <avr/interrupt.h>
+#include <avr/io.h>
 
 void os_initScheduler(void);
 
@@ -71,5 +72,21 @@ void os_init(void) {
  *  \param str  The error to be displayed
  */
 void os_errorPStr(char const* str) {
-    #warning IMPLEMENT STH. HERE
+    SREG &= ~(0b1 << 7);  // stop all action
+    
+    // display error
+    lcd_clear();
+    lcd_line1();
+    
+    lcd_writeProgString(str);
+    
+    // wait for Enter + ESC input 
+    uint8_t input;
+    do {
+        input = os_getInput();
+    } while(input != 0b1001);
+    os_waitForNoInput();
+    
+    
+    SREG |= 0b1 << 7;  // return action
 }
