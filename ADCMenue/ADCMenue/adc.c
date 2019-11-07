@@ -44,17 +44,24 @@ void initAdc(void) {
  * \return The converted voltage (0 = 0V, 1023 = AVCC)
  */
 uint16_t getAdcValue() {
-    // Start the conversion
-    ADCSRA |= (1 << ADSC);
+	uint16_t sum = 0;
+	uint16_t tmp;
+	
+	for (uint8_t i = 0; i < 16; i++){ 
+		// Start the conversion
+		ADCSRA |= (1 << ADSC);
 
-    // Wait until the conversion has finished
-    while (ADCSRA & (1 << ADSC)) {};
+		// Wait until the conversion has finished
+		while (ADCSRA & (1 << ADSC)) {};
 
-    // Store the value as last captured
-    lastCaptured = ADCL | ((uint16_t)ADCH << 8);
+		// Store the value as last captured
+		tmp = ADCL | ((uint16_t)ADCH << 8);
 
-    // Return the result
-    return lastCaptured;
+		sum += tmp;
+	}
+	lastCaptured = sum / 16;
+	return lastCaptured;
+	
 }
 
 /*! \brief Returns the size of the buffer which stores voltage values.
