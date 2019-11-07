@@ -98,7 +98,7 @@ void displayClock(void) {
 void displayVoltageBuffer(uint8_t displayIndex) {
     lcd_line2();
     char *string = malloc(3+1+3+2 * sizeof(char));
-    sprintf(string, "%03d/100: ", displayIndex);
+    sprintf(string, "%03d/100: ", displayIndex + 1);
     lcd_writeString(string);
     free(string);
     lcd_writeVoltage(getStoredVoltage(displayIndex), 1023, 5);
