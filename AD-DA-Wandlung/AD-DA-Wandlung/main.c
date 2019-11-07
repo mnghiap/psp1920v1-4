@@ -30,9 +30,13 @@ uint8_t get_pinc0(){
 void tracking(){
     init_wandler();
     do { 
+		if (PORTB == 0xFF) {
+			return;	
+		}
+		
         PORTB += 1; //Inkrementiert
         _delay_ms(50);
-        an_LED_ausgeben();
+        an_LED_ausgeben();	
     } while (get_pinc0() == 0); //Solange U_ref < U_mess
     PORTB -= 1; // U_mess einmal ueberschritten
     _delay_ms(50);
@@ -56,9 +60,11 @@ void sar(){
 int main(void)
 {
     uint8_t wandlung = 2; // Auswahl von Wandlungsart
+
 	while(1){
 		os_initInput();
-		os_waitForInput();
+		if (wandlung != 0)
+			os_waitForInput();
 		switch(wandlung){
 			case 0:
 				manuell();
@@ -75,7 +81,8 @@ int main(void)
 			default:
 				break;
 		};
-		os_waitForNoInput();
+		if (wandlung != 0)
+			os_waitForNoInput();
 		//wandlung = (wandlung + 1) % 3;
 	}
 }
