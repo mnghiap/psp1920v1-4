@@ -17,10 +17,10 @@
 //----------------------------------------------------------------------------
 
 //! Array of states for every possible process
-#warning IMPLEMENT STH. HERE
+Process* os_processes[MAX_NUMBER_OF_PROCESSES];
 
 //! Array of function pointers for every registered program
-#warning IMPLEMENT STH. HERE
+Program* os_programs[MAX_NUMBER_OF_PROGRAMS];
 
 //! Index of process that is currently executed (default: idle)
 #warning IMPLEMENT STH. HERE
