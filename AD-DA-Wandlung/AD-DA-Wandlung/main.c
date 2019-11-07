@@ -55,7 +55,7 @@ void sar(){
 
 int main(void)
 {
-    uint8_t wandlung = 0; // Auswahl von Wandlungsart
+    uint8_t wandlung = 2; // Auswahl von Wandlungsart
 	while(1){
 		os_initInput();
 		os_waitForInput();
@@ -76,7 +76,7 @@ int main(void)
 				break;
 		};
 		os_waitForNoInput();
-		wandlung = (wandlung + 1) % 3;
+		//wandlung = (wandlung + 1) % 3;
 	}
 }
 

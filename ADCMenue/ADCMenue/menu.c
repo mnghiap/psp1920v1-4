@@ -16,7 +16,7 @@
  */
 
 uint8_t get_WaitingESC(){ // Get Zustand von ESC
-    if (os_getInput() & 0b1000 != 0) {
+    if ((os_getInput() & 0b1000) == 0b1000) {
         os_waitForNoInput();
         return 1;
     }        
@@ -25,14 +25,12 @@ uint8_t get_WaitingESC(){ // Get Zustand von ESC
 
 void helloWorld(void) {
     // Repeat until ESC gets pressed
+	lcd_clear();
     while(get_WaitingESC() == 0){ //ESC nicht gedrueckt
-        lcd_clear();
         lcd_line1();
         lcd_writeProgString(PSTR("Hallo Welt!"));
         _delay_ms(500);
         lcd_clear();
-        lcd_line1();
-        lcd_writeProgString(PSTR("Hallo Welt!"));
         _delay_ms(500);
     }
 }
