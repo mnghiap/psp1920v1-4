@@ -31,7 +31,7 @@ typedef uint8_t StackChecksum;
 
 //! Type for the state a specific process is currently in.
 typedef enum ProcessState {
-    OS_PS_UNUSED,
+    OS_PS_UNUSED = 0,
     OS_PS_READY,
     OS_PS_RUNNING,
     OS_PS_BLOCKED

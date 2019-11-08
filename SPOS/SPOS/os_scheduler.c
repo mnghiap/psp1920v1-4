@@ -207,7 +207,16 @@ void os_startScheduler(void) {
  *  initialize its internal data-structures and register.
  */
 void os_initScheduler(void) {
-    #warning IMPLEMENT STH. HERE
+    // 1. prepare os_processes
+    memset(os_processes, OS_PS_UNUSED, sizeof(os_processes));
+    
+    // 2. set autostart programs
+    for (int i = 0; i < MAX_NUMBER_OF_PROGRAMS; i++)
+        if (os_checkAutostartProgram(i))
+            os_exec(i, DEFAULT_PRIORITY);
+    
+    
+    
 }
 
 /*!
