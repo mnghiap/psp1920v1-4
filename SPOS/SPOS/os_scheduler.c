@@ -17,7 +17,7 @@
 //----------------------------------------------------------------------------
 
 //! Array of states for every possible process
-Process* os_processes[MAX_NUMBER_OF_PROCESSES];
+Process os_processes[MAX_NUMBER_OF_PROCESSES] = {{OS_PS_UNUSED, {0}, 0, 0}};
 
 //! Array of function pointers for every registered program
 Program* os_programs[MAX_NUMBER_OF_PROGRAMS];
@@ -164,7 +164,7 @@ ProcessID os_exec(ProgramID programID, Priority priority) {
     for (pid = 0; pid <= MAX_NUMBER_OF_PROCESSES; pid++) {
         if (pid == MAX_NUMBER_OF_PROCESSES)  // element that isn't available in `os_programs`
             return INVALID_PROCESS;
-        if (os_processes[pid] == NULL)
+        if (os_processes[pid].state == OS_PS_UNUSED)
             break;  // first null elem. found
     }
     
@@ -172,22 +172,23 @@ ProcessID os_exec(ProgramID programID, Priority priority) {
     Program* program_ptr = os_lookupProgramFunction(programID);
     if (program_ptr == NULL)
         return INVALID_PROCESS;
-    
+	
+	    
     // 3. store program index, state and priority
-    os_processes[pid] = Process {
-        .state = ProcessState.OS_PS_READY,
+	os_processes[pid] = (Process){
+		.sp = {PROCESS_STACK_BOTTOM(pid) - (32 + 1 + 2)},
+        .state = OS_PS_READY,
         .progID = programID,
-        .priority = priority,
-        .sp = PROCESS_STACK_BOTTOM(pid)
+        .priority = priority
     };
     
-    // 4. prepare process stack
-    StackPointer ptr = {.as_ptr = program_ptr};
+	// 4. prepare process stack
+    StackPointer ptr = {.as_ptr = (uint8_t*)program_ptr };
     
-    *(os_processes[pid]->sp.as_ptr + 0) = (uint8_t)(ptr.as_int & 0xFF);
-    *(os_processes[pid]->sp.as_ptr + 1) = (uint8_t)(ptr.as_int >> 8);
+    os_processes[pid].sp.as_ptr[35 - 0] = (uint8_t)(ptr.as_int & 0xFF);
+    os_processes[pid].sp.as_ptr[35 - 1] = (uint8_t)(ptr.as_int >> 8);
     for (int i = 0; i < 33; i++)
-        *(os_processes[pid]->sp.as_ptr + (i+2)) = 0;
+        os_processes[pid].sp.as_ptr[35 - i-2] = 0;
         
     return pid;
 }
