@@ -159,7 +159,37 @@ ProgramID os_lookupProgramID(Program* program) {
  *          INVALID_PROCESS as specified in defines.h).
  */
 ProcessID os_exec(ProgramID programID, Priority priority) {
-    #warning IMPLEMENT STH. HERE
+    // 1. find free space in `os_processes`
+    ProcessID pid = 0;
+    for (pid = 0; pid <= MAX_NUMBER_OF_PROCESSES; pid++) {
+        if (pid == MAX_NUMBER_OF_PROCESSES)  // element that isn't available in `os_programs`
+            return INVALID_PROCESS;
+        if (os_processes[pid] == NULL)
+            break;  // first null elem. found
+    }
+    
+    // 2. load program index
+    Program* program_ptr = os_lookupProgramFunction(programID);
+    if (program_ptr == NULL)
+        return INVALID_PROCESS;
+    
+    // 3. store program index, state and priority
+    os_processes[pid] = Process {
+        .state = ProcessState.OS_PS_READY,
+        .progID = programID,
+        .priority = priority,
+        .sp = PROCESS_STACK_BOTTOM(pid)
+    };
+    
+    // 4. prepare process stack
+    StackPointer ptr = {.as_ptr = program_ptr};
+    
+    *(os_processes[pid]->sp.as_ptr + 0) = (uint8_t)(ptr.as_int & 0xFF);
+    *(os_processes[pid]->sp.as_ptr + 1) = (uint8_t)(ptr.as_int >> 8);
+    for (int i = 0; i < 33; i++)
+        *(os_processes[pid]->sp.as_ptr + (i+2)) = 0;
+        
+    return pid;
 }
 
 /*!
