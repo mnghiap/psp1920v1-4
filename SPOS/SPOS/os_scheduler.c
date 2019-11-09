@@ -214,9 +214,6 @@ void os_initScheduler(void) {
     for (int i = 0; i < MAX_NUMBER_OF_PROGRAMS; i++)
         if (os_checkAutostartProgram(i))
             os_exec(i, DEFAULT_PRIORITY);
-    
-    
-    
 }
 
 /*!
