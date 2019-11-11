@@ -75,6 +75,9 @@ void os_setSchedulingStrategy(SchedulingStrategy strategy);
 //! Gets the current scheduling strategy
 SchedulingStrategy os_getSchedulingStrategy(void);
 
+//! Execute scheduling strategy
+void executeScheduler(SchedulingStrategy strategy);
+
 //! Calculates the checksum of the stack for the corresponding process of pid.
 StackChecksum os_getStackChecksum(ProcessID pid);
 

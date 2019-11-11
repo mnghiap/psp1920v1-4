@@ -72,6 +72,7 @@ void os_init(void) {
  *  \param str  The error to be displayed
  */
 void os_errorPStr(char const* str) {
+    uint8_t SREGbak = SREG;
     SREG &= ~(0b1 << 7);  // stop all action
     
     // display error
@@ -88,5 +89,5 @@ void os_errorPStr(char const* str) {
     os_waitForNoInput();
     
     
-    SREG |= 0b1 << 7;  // return action
+    SREG = SREGbak;  // return action
 }

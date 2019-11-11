@@ -4,6 +4,7 @@
 #include "os_scheduling_strategies.h"
 #include "os_taskman.h"
 #include "os_core.h"
+#include "string.h"
 #include "lcd.h"
 
 #include <avr/interrupt.h>
@@ -23,7 +24,7 @@ Process os_processes[MAX_NUMBER_OF_PROCESSES] = {{OS_PS_UNUSED, {0}, 0, 0}};
 Program* os_programs[MAX_NUMBER_OF_PROGRAMS];
 
 //! Index of process that is currently executed (default: idle)
-#warning IMPLEMENT STH. HERE
+ProcessID currentProc;
 
 //----------------------------------------------------------------------------
 // Private variables
@@ -58,7 +59,28 @@ ISR(TIMER2_COMPA_vect) __attribute__((naked));
  *  the processor to that process.
  */
 ISR(TIMER2_COMPA_vect) {
-    #warning IMPLEMENT STH. HERE
+    // 1. store PC
+    //  - done implicitly by jumping into ISR
+   
+    // 2. Store context and SP of current process 
+    saveContext();
+    os_processes[os_getCurrentProc()].sp.as_int = SP;
+    
+    // 3. set SP to scheduler stack
+    SP = BOTTOM_OF_ISR_STACK;
+    
+    // 4. set cur. process to OS_PS_READY
+    os_processes[os_getCurrentProc()].state = OS_PS_READY;
+    
+    // 5. get next process depending on scheduling strategy
+    executeScheduler(os_getSchedulingStrategy());
+    
+    // 6. restore new process (SP and context) and set state
+    os_processes[os_getCurrentProc()].state = OS_PS_RUNNING;
+    SP = os_processes[os_getCurrentProc()].sp.as_int;
+    restoreContext();
+    
+    // 7. automatic return
 }
 
 /*!
@@ -242,7 +264,7 @@ Program** os_getProgramSlot(ProgramID programID) {
  *  \return The process id of the currently active process.
  */
 ProcessID os_getCurrentProc(void) {
-    #warning IMPLEMENT STH. HERE
+    return currentProc;
 }
 
 /*!
@@ -290,6 +312,26 @@ void os_setSchedulingStrategy(SchedulingStrategy strategy) {
 SchedulingStrategy os_getSchedulingStrategy(void) {
     #warning IMPLEMENT STH. HERE
 }
+
+/*!
+ *  Set currentProc to the next process in line, depending 
+ *  on the current scheduling strategy
+ */
+void executeScheduler(SchedulingStrategy strategy) {
+    ProcessID (*fun_ptr)(Process const[], ProcessID) = os_Scheduler_Even;
+  
+    switch(strategy) {
+        case OS_SS_EVEN: fun_ptr = os_Scheduler_Even; break;
+        case OS_SS_RANDOM: fun_ptr = os_Scheduler_Random; break;
+        case OS_SS_RUN_TO_COMPLETION: fun_ptr = os_Scheduler_RunToCompletion; break;
+        case OS_SS_ROUND_ROBIN: fun_ptr = os_Scheduler_RoundRobin; break;
+        case OS_SS_INACTIVE_AGING: fun_ptr = os_Scheduler_InactiveAging; break;
+        default: os_errorPStr(PSTR("Unknown scheduling strategy"));
+    }   
+    
+    currentProc = fun_ptr(os_processes, currentProc);
+}
+
 
 /*!
  *  Enters a critical code section by disabling the scheduler if needed.
