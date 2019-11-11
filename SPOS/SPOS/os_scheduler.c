@@ -125,7 +125,11 @@ bool os_checkAutostartProgram(ProgramID programID) {
  *  and processor time no other process wants to have.
  */
 PROGRAM(0, AUTOSTART) {
-    #warning IMPLEMENT STH. HERE
+    for (;;) {
+        lcd_clear();
+        lcd_writeProgString(PSTR("."));
+        delayMs(DEFAULT_OUTPUT_DELAY);
+    }
 }
 
 /*!
@@ -221,7 +225,10 @@ ProcessID os_exec(ProgramID programID, Priority priority) {
  *  applications.
  */
 void os_startScheduler(void) {
-    #warning IMPLEMENT STH. HERE
+    currentProc = 0;
+    os_processes[0].state = OS_PS_RUNNING;
+    SP = os_processes[0].sp.as_int;
+    restoreContext();
 }
 
 /*!
