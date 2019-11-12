@@ -185,6 +185,7 @@ ProgramID os_lookupProgramID(Program* program) {
  *          INVALID_PROCESS as specified in defines.h).
  */
 ProcessID os_exec(ProgramID programID, Priority priority) {
+	os_enterCriticalSection();
     // 1. find free space in `os_processes`
     ProcessID pid = 0;
     for (pid = 0; pid <= MAX_NUMBER_OF_PROCESSES; pid++) {
@@ -217,6 +218,7 @@ ProcessID os_exec(ProgramID programID, Priority priority) {
         os_processes[pid].sp.as_ptr[35 - i-2] = 0;
         
     return pid;
+	os_leaveCriticalSection();
 }
 
 /*!
@@ -348,7 +350,11 @@ void executeScheduler(SchedulingStrategy strategy) {
  *  This function supports up to 255 nested critical sections.
  */
 void os_enterCriticalSection(void) {
-    #warning IMPLEMENT STH. HERE
+    uint8_t GIEB = SREG >> 7; //Save the state of Global Interrupt Enable Bit
+	SREG &= 0b01111111; //Deactivate Global Interrupt Enable Bit
+	criticalSectionCount++;
+	TIMSK2 &= 0b11111101; //Deactivate Scheduler through deleting OCIE2A Bit
+	SREG |= (GIEB << 7) //Restore the state of GIEB
 }
 
 /*!
@@ -358,7 +364,13 @@ void os_enterCriticalSection(void) {
  *  has to be reactivated.
  */
 void os_leaveCriticalSection(void) {
-    #warning IMPLEMENT STH. HERE
+    uint8_t GIEB = SREG >> 7; //Save the state of Global Interrupt Enable Bit
+    SREG &= 0b01111111; //Deactivate Global Interrupt Enable Bit
+    criticalSectionCount--;
+	if(criticalSectionCount == 0) {
+		TIMSK2 &= 0b11111101; //Deactivate Scheduler only when there is no nested critical section
+	}
+    SREG |= (GIEB << 7) //Restore the state of GIEB
 }
 
 /*!
