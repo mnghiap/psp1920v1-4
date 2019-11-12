@@ -89,7 +89,7 @@ typedef enum {
     Program prog##INDEX; \
     void registerProgram##INDEX(void) __attribute__ ((constructor)); \
     void registerProgram##INDEX(void) { \
-        Program** os_getProgramSlot(ProgramID progId); \
+       Program** os_getProgramSlot(ProgramID progId); \
         *(os_getProgramSlot(INDEX)) = prog##INDEX; \
         extern uint16_t os_autostart;\
         os_autostart |= (ON_START_DO == AUTOSTART) << (INDEX); \

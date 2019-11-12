@@ -25,6 +25,31 @@ void os_resetProcessSchedulingInformation(ProcessID id) {
     // This is a presence task
 }
 
+/*! 
+ *  This function returns the next process in the process array that is ready to run,
+ *  starting from the current process. It only returns 0 (the idle process) if no other  
+ *  process except than the idle process is in ready state.
+ *
+ *  \param processes An array holding the processes to choose the next process from.
+ *  \param current The id of the current process.
+ *  \return The next process after current process that is in ready state. 
+ */
+ProcessID os_getNextReadyProcess(Process const processes[], ProcessID current) {
+	uint8_t length = MAX_NUMBER_OF_PROCESSES; //Convenient naming
+	ProcessID afterCurrent = (current + 1) % length;
+	ProcessID nextProcessID = afterCurrent; //The search starts at the process after the current one
+	do {
+		if (processes[nextProcessID]->state != OS_PS_READY){ //Not ready
+			nextProcessID = (nextProcessID + 1) % length; //Go to next process
+		} else if (nextProcessID == 0){
+			continue; //We ignore the idle process and continue the search
+		} else {
+			return nextProcessID; //Such process found
+		}
+	} while (nextProcessID != afterCurrent);
+	return 0; //All process checked, no ready found other than idle
+}
+
 /*!
  *  This function implements the even strategy. Every process gets the same
  *  amount of processing time and is rescheduled after each scheduler call
@@ -36,7 +61,25 @@ void os_resetProcessSchedulingInformation(ProcessID id) {
  *  \return The next process to be executed determined on the basis of the even strategy.
  */
 ProcessID os_Scheduler_Even(Process const processes[], ProcessID current) {
-    #warning IMPLEMENT STH. HERE
+    return os_getNextReadyProcess(processes, current); //Straightforward go to the next ready one
+}
+
+/*!
+ *  This functions counts how many processes that are ready to run.
+ *  It should help with implementation of the RANDOM scheduling strategy.
+ *  The idle process and already running processes will be ignored.
+ * 
+ *  \param processes An array holding all processes.
+ *  \return The number of runnable processes, except the idle process.
+ */
+uint8_t os_countReadyProcesses(Process const processes[]) {
+	uint8_t count = 0;
+	for (uint8_t pid = 1; pid < MAX_NUMBER_OF_PROCESSES; pid++){ //Starts from 1 as idle process is ignored
+		if(processes[pid]->state == OS_PS_READY){
+			count++;
+		}
+	}
+	return count;
 }
 
 /*!
@@ -48,7 +91,13 @@ ProcessID os_Scheduler_Even(Process const processes[], ProcessID current) {
  *  \return The next process to be executed determined on the basis of the random strategy.
  */
 ProcessID os_Scheduler_Random(Process const processes[], ProcessID current) {
-    #warning IMPLEMENT STH. HERE
+	ProcessID nextProcessID = current;
+    uint8_t count = os_countReadyProcesses(processes); //Number of ready processes
+	uint8_t randomNumber = rand(count) % MAX_NUMBER_OF_PROCESSES; 
+	do {
+		nextProcessID = os_getNextReadyProcess(processes, nextProcessID);
+	} while (randomNumber > 0);
+	return nextProcessID;
 }
 
 /*!
