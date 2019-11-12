@@ -54,6 +54,7 @@ typedef struct {
     StackPointer sp;
     ProgramID progID;
     Priority priority;
+	StackChecksum checksum;
 } Process;
 
 //! This is the type of a program function (not the pointer to one!).

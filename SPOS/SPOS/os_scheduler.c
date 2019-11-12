@@ -69,6 +69,9 @@ ISR(TIMER2_COMPA_vect) {
     // 3. set SP to scheduler stack
     SP = BOTTOM_OF_ISR_STACK;
     
+	// 3.5. calculate and save Stack Checksum 
+	os_processes[os_getCurrentProc()].checksum = os_getStackChecksum(os_getCurrentProc());
+	
     // 4. set cur. process to OS_PS_READY
     os_processes[os_getCurrentProc()].state = OS_PS_READY;
     
@@ -79,6 +82,12 @@ ISR(TIMER2_COMPA_vect) {
     os_processes[os_getCurrentProc()].state = OS_PS_RUNNING;
     SP = os_processes[os_getCurrentProc()].sp.as_int;
     restoreContext();
+	
+	// 6.5. verify checksum to avoid stack inconsistence
+	uint8_t currentChecksum = os_getStackChecksum(os_getCurrentProc());
+	if(currentChecksum != os_processes[os_getCurrentProc()].checksum){
+		os_errorPStr("Stack overflow");
+	}
     
     // 7. automatic return
 }
@@ -216,6 +225,9 @@ ProcessID os_exec(ProgramID programID, Priority priority) {
     os_processes[pid].sp.as_ptr[35 - 1] = (uint8_t)(ptr.as_int >> 8);
     for (int i = 0; i < 33; i++)
         os_processes[pid].sp.as_ptr[35 - i-2] = 0;
+		
+	// 5. initialize stack checksum
+	os_processes[pid].checksum = os_getStackChecksum(pid);
         
     return pid;
 	os_leaveCriticalSection();
@@ -243,7 +255,7 @@ void os_initScheduler(void) {
     
     // 2. set autostart programs
     for (int i = 0; i < MAX_NUMBER_OF_PROGRAMS; i++)
-        if (os_checkAutostartProgram(i))
+        if (os_checkAutostartProgram(i)) 
             os_exec(i, DEFAULT_PRIORITY);
 }
 
@@ -380,5 +392,9 @@ void os_leaveCriticalSection(void) {
  *  \return The checksum of the pid'th stack.
  */
 StackChecksum os_getStackChecksum(ProcessID pid) {
-    #warning IMPLEMENT STH. HERE
+    StackChecksum checksum = os_processes[pid].sp.as_ptr[1];
+	for(uint8_t i = 1; i <= 34; i++){
+		checksum ^= os_processes[pid].sp.as_ptr[i+1];
+	}
+	return checksum;
 }
