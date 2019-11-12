@@ -74,6 +74,12 @@ ISR(TIMER2_COMPA_vect) {
 	
     // 4. set cur. process to OS_PS_READY
     os_processes[os_getCurrentProc()].state = OS_PS_READY;
+	
+	// 4.5. open task manager if ESC + ENTER are pressed
+	if(os_getInput() == 0b1001){
+		os_waitForNoInput();
+		os_taskManMain();
+	}
     
     // 5. get next process depending on scheduling strategy
     executeScheduler(os_getSchedulingStrategy());
@@ -86,7 +92,7 @@ ISR(TIMER2_COMPA_vect) {
 	// 6.5. verify checksum to avoid stack inconsistence
 	uint8_t currentChecksum = os_getStackChecksum(os_getCurrentProc());
 	if(currentChecksum != os_processes[os_getCurrentProc()].checksum){
-		os_errorPStr("Stack overflow");
+		os_errorPStr("Stack inconsistency");
 	}
     
     // 7. automatic return
