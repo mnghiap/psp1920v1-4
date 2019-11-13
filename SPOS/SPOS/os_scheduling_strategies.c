@@ -39,9 +39,10 @@ ProcessID os_getNextReadyProcess(Process const processes[], ProcessID current) {
 	ProcessID afterCurrent = (current + 1) % length;
 	ProcessID nextProcessID = afterCurrent; //The search starts at the process after the current one
 	do {
-		if (processes[nextProcessID]->state != OS_PS_READY){ //Not ready
+		if (processes[nextProcessID].state != OS_PS_READY){ //Not ready
 			nextProcessID = (nextProcessID + 1) % length; //Go to next process
 		} else if (nextProcessID == 0){
+			nextProcessID = (nextProcessID + 1) % length; //Go to next process
 			continue; //We ignore the idle process and continue the search
 		} else {
 			return nextProcessID; //Such process found
@@ -75,7 +76,7 @@ ProcessID os_Scheduler_Even(Process const processes[], ProcessID current) {
 uint8_t os_countReadyProcesses(Process const processes[]) {
 	uint8_t count = 0;
 	for (uint8_t pid = 1; pid < MAX_NUMBER_OF_PROCESSES; pid++){ //Starts from 1 as idle process is ignored
-		if(processes[pid]->state == OS_PS_READY){
+		if(processes[pid].state == OS_PS_READY){
 			count++;
 		}
 	}
@@ -93,10 +94,10 @@ uint8_t os_countReadyProcesses(Process const processes[]) {
 ProcessID os_Scheduler_Random(Process const processes[], ProcessID current) {
 	ProcessID nextProcessID = current;
     uint8_t count = os_countReadyProcesses(processes); //Number of ready processes
-	uint8_t randomNumber = rand(count) % MAX_NUMBER_OF_PROCESSES; 
-	do {
+	uint8_t randomNumber = rand() % count; 
+	for(uint8_t i = 0; i < randomNumber; i++){
 		nextProcessID = os_getNextReadyProcess(processes, nextProcessID);
-	} while (randomNumber > 0);
+	};
 	return nextProcessID;
 }
 

@@ -234,9 +234,9 @@ ProcessID os_exec(ProgramID programID, Priority priority) {
 		
 	// 5. initialize stack checksum
 	os_processes[pid].checksum = os_getStackChecksum(pid);
-        
+    os_leaveCriticalSection();
     return pid;
-	os_leaveCriticalSection();
+	
 }
 
 /*!
@@ -372,7 +372,7 @@ void os_enterCriticalSection(void) {
 	SREG &= 0b01111111; //Deactivate Global Interrupt Enable Bit
 	criticalSectionCount++;
 	TIMSK2 &= 0b11111101; //Deactivate Scheduler through deleting OCIE2A Bit
-	SREG |= (GIEB << 7) //Restore the state of GIEB
+	SREG |= (GIEB << 7); //Restore the state of GIEB
 }
 
 /*!
@@ -388,7 +388,7 @@ void os_leaveCriticalSection(void) {
 	if(criticalSectionCount == 0) {
 		TIMSK2 &= 0b11111101; //Deactivate Scheduler only when there is no nested critical section
 	}
-    SREG |= (GIEB << 7) //Restore the state of GIEB
+    SREG |= (GIEB << 7); //Restore the state of GIEB
 }
 
 /*!
