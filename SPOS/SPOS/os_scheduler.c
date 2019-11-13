@@ -368,11 +368,15 @@ void executeScheduler(SchedulingStrategy strategy) {
  *  This function supports up to 255 nested critical sections.
  */
 void os_enterCriticalSection(void) {
-    uint8_t GIEB = SREG >> 7; //Save the state of Global Interrupt Enable Bit
+    uint8_t GIEB = (SREG & 0b10000000); //Save the state of Global Interrupt Enable Bit
 	SREG &= 0b01111111; //Deactivate Global Interrupt Enable Bit
 	criticalSectionCount++;
 	TIMSK2 &= 0b11111101; //Deactivate Scheduler through deleting OCIE2A Bit
-	SREG |= (GIEB << 7); //Restore the state of GIEB
+	if(GIEB == 0){
+	    SREG &= 0b01111111;
+	} else {
+	    SREG |= 0b10000000; 
+	}; //Restore the state of GIEB
 }
 
 /*!
@@ -382,13 +386,17 @@ void os_enterCriticalSection(void) {
  *  has to be reactivated.
  */
 void os_leaveCriticalSection(void) {
-    uint8_t GIEB = SREG >> 7; //Save the state of Global Interrupt Enable Bit
+    uint8_t GIEB = (SREG & 0b10000000); //Save the state of Global Interrupt Enable Bit
     SREG &= 0b01111111; //Deactivate Global Interrupt Enable Bit
     criticalSectionCount--;
 	if(criticalSectionCount == 0) {
-		TIMSK2 &= 0b11111101; //Deactivate Scheduler only when there is no nested critical section
-	}
-    SREG |= (GIEB << 7); //Restore the state of GIEB
+		TIMSK2 |= 0b00000010; //Activate Scheduler only when there is no nested critical section
+	};
+    if(GIEB == 0){
+	    SREG &= 0b01111111;
+	} else {
+	    SREG |= 0b10000000; 
+	}; //Restore the state of GIEB
 }
 
 /*!

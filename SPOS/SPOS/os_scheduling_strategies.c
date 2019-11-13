@@ -42,8 +42,7 @@ ProcessID os_getNextReadyProcess(Process const processes[], ProcessID current) {
 		if (processes[nextProcessID].state != OS_PS_READY){ //Not ready
 			nextProcessID = (nextProcessID + 1) % length; //Go to next process
 		} else if (nextProcessID == 0){
-			nextProcessID = (nextProcessID + 1) % length; //Go to next process
-			continue; //We ignore the idle process and continue the search
+			nextProcessID = (nextProcessID + 1) % length; //We ignore the idle process and continue the search
 		} else {
 			return nextProcessID; //Such process found
 		}
