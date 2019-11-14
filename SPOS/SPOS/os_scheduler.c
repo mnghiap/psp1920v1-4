@@ -8,6 +8,7 @@
 #include "lcd.h"
 
 #include <avr/interrupt.h>
+#include <stdbool.h>
 
 //----------------------------------------------------------------------------
 // Private Types
@@ -62,40 +63,40 @@ ISR(TIMER2_COMPA_vect) {
     // 1. store PC
     //  - done implicitly by jumping into ISR
    
-    // 2. Store context and SP of current process 
+    // 2 + 3. Store context and SP of current process 
     saveContext();
     os_processes[os_getCurrentProc()].sp.as_int = SP;
     
-    // 3. set SP to scheduler stack
+    // 4. set SP to scheduler stack
     SP = BOTTOM_OF_ISR_STACK;
-    
-	// 3.5. calculate and save Stack Checksum 
+	
+	// Calculate and save Stack Checksum
 	os_processes[os_getCurrentProc()].checksum = os_getStackChecksum(os_getCurrentProc());
 	
-    // 4. set cur. process to OS_PS_READY
+    // 5. set cur. process to OS_PS_READY
     os_processes[os_getCurrentProc()].state = OS_PS_READY;
 	
-	// 4.5. open task manager if ESC + ENTER are pressed
+	// Open task manager if ESC + ENTER are pressed
 	if(os_getInput() == 0b1001){
 		os_waitForNoInput();
 		os_taskManMain();
 	}
     
-    // 5. get next process depending on scheduling strategy
+    // 6. get next process depending on scheduling strategy
     executeScheduler(os_getSchedulingStrategy());
-    
-    // 6. restore new process (SP and context) and set state
+	
+	// Verify checksum to avoid stack inconsistence
+	StackChecksum currentChecksum = os_getStackChecksum(os_getCurrentProc());
+	if(currentChecksum != os_processes[os_getCurrentProc()].checksum){
+		os_error("Stack inconsistency");
+	}
+	
+    // 7 + 8 + 9. restore new process (SP and context) and set state
     os_processes[os_getCurrentProc()].state = OS_PS_RUNNING;
     SP = os_processes[os_getCurrentProc()].sp.as_int;
-    restoreContext();
+	restoreContext();
 	
-	// 6.5. verify checksum to avoid stack inconsistence
-	uint8_t currentChecksum = os_getStackChecksum(os_getCurrentProc());
-	if(currentChecksum != os_processes[os_getCurrentProc()].checksum){
-		os_errorPStr("Stack inconsistency");
-	}
-    
-    // 7. automatic return
+    // 10. automatic return
 }
 
 /*!
@@ -200,28 +201,32 @@ ProgramID os_lookupProgramID(Program* program) {
  *          INVALID_PROCESS as specified in defines.h).
  */
 ProcessID os_exec(ProgramID programID, Priority priority) {
+	
 	os_enterCriticalSection();
     // 1. find free space in `os_processes`
     ProcessID pid = 0;
     for (pid = 0; pid <= MAX_NUMBER_OF_PROCESSES; pid++) {
-        if (pid == MAX_NUMBER_OF_PROCESSES)  // element that isn't available in `os_programs`
-            return INVALID_PROCESS;
+        if (pid == MAX_NUMBER_OF_PROCESSES){  // element that isn't available in `os_programs`
+            os_leaveCriticalSection();
+			return INVALID_PROCESS;
+		}
         if (os_processes[pid].state == OS_PS_UNUSED)
             break;  // first null elem. found
     }
-    
+
     // 2. load program index
     Program* program_ptr = os_lookupProgramFunction(programID);
-    if (program_ptr == NULL)
+    if (program_ptr == NULL){
+		os_leaveCriticalSection();
         return INVALID_PROCESS;
-	
+	}
 	    
     // 3. store program index, state and priority
 	os_processes[pid] = (Process){
 		.sp = {PROCESS_STACK_BOTTOM(pid) - (32 + 1 + 2)},
         .state = OS_PS_READY,
         .progID = programID,
-        .priority = priority
+        .priority = priority,
     };
     
 	// 4. prepare process stack
@@ -235,6 +240,7 @@ ProcessID os_exec(ProgramID programID, Priority priority) {
 	// 5. initialize stack checksum
 	os_processes[pid].checksum = os_getStackChecksum(pid);
     os_leaveCriticalSection();
+	
     return pid;
 	
 }
@@ -406,9 +412,12 @@ void os_leaveCriticalSection(void) {
  *  \return The checksum of the pid'th stack.
  */
 StackChecksum os_getStackChecksum(ProcessID pid) {
-    StackChecksum checksum = os_processes[pid].sp.as_ptr[1];
-	for(uint8_t i = 1; i <= 34; i++){
-		checksum ^= os_processes[pid].sp.as_ptr[i+1];
+	uint16_t saveStackPointer = os_processes[pid].sp.as_int; //Save the current address of the stack pointer
+	os_processes[pid].sp.as_int = PROCESS_STACK_BOTTOM(pid) - STACK_SIZE_PROC + 1; //Set stack pointer address to top of stack
+    StackChecksum newChecksum = os_processes[pid].sp.as_ptr[0]; //The value of the top of stack
+	for(uint8_t i = 1; i <= STACK_SIZE_PROC - 1; i++){
+		newChecksum ^= os_processes[pid].sp.as_ptr[i]; //XOR everything down to the bottom
 	}
-	return checksum;
+	os_processes[pid].sp.as_int = saveStackPointer; //Restore the stack pointer before calculation
+	return newChecksum;
 }

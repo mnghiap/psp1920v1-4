@@ -87,7 +87,5 @@ void os_errorPStr(char const* str) {
         input = os_getInput();
     } while(input != 0b1001);
     os_waitForNoInput();
-    
-    
     SREG = SREGbak;  // return action
 }
