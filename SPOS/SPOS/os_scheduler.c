@@ -239,6 +239,9 @@ ProcessID os_exec(ProgramID programID, Priority priority) {
 		
 	// 5. initialize stack checksum
 	os_processes[pid].checksum = os_getStackChecksum(pid);
+	
+	os_resetProcessSchedulingInformation(pid);
+	
     os_leaveCriticalSection();
 	
     return pid;
@@ -335,6 +338,7 @@ uint8_t os_getNumberOfRegisteredPrograms(void) {
  */
 void os_setSchedulingStrategy(SchedulingStrategy strategy) {
     currentStrat = strategy;
+	os_resetSchedulingInformation(currentStrat);
 }
 
 /*!
