@@ -60,7 +60,8 @@ void os_init(void) {
     lcd_init();
 
     lcd_writeProgString(PSTR("Booting SPOS ..."));
-
+	
+	
     os_initScheduler();
 
     os_coarseSystemTime = 0;

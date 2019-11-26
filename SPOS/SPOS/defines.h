@@ -32,7 +32,7 @@
 //----------------------------------------------------------------------------
 
 //! The current id of the exercise (this must be changed every two weeks).
-#define VERSUCH 2
+#define VERSUCH 3
 
 //----------------------------------------------------------------------------
 // System constants
@@ -90,4 +90,5 @@
 //! The bottom of the memory chunk with number PID.
 #define PROCESS_STACK_BOTTOM(PID)   (BOTTOM_OF_PROCS_STACK - ((PID) * STACK_SIZE_PROC))
 
+#define HEAPOFFSET                  200
 #endif

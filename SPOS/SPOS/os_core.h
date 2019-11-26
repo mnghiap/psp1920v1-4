@@ -13,6 +13,9 @@
 
 #include <avr/pgmspace.h>
 
+//! What should we do with this? Should we check it in os_init?
+extern uint8_t const __heap_start;
+
 //! Handy define to specify error messages directly
 #define os_error(str) os_errorPStr(PSTR(str))
 
