@@ -5,7 +5,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description="Help adding git issues to milestones for PSP checklist")
 parser.add_argument("-c", "--config", default=None, help="the name of the gitlab config. leave empty for default")
-parser.add_argument("-m", "--milestone", required=True, help="The milestone iid (last number in the milestone url) to save all issues to")
+parser.add_argument("-m", "--milestone", required=True, type=int, help="The milestone iid (last number in the milestone url) to save all issues to")
 parser.add_argument("-p", "--project", required=True, help="The project id (can be found online) to work on")
 
 
@@ -22,8 +22,7 @@ def config():
     except GitlabHttpError:
         raise Exception("Current user is not a member of given project")
 
-    
-    milestones = project.milestones.list(iid=args.milestone)
+    milestones = [i for i in project.milestones.list() if i.iid == args.milestone]
     
     if len(milestones) != 1:
         raise Exception("More than one milestone with this iid found (WTF????)")
