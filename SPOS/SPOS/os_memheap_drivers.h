@@ -21,7 +21,7 @@ typedef enum{
 
 typedef struct Heap {
 	MemDriver* driver;
-	AllocStrategy mem_strat;
+	AllocStrategy alloc_strat;
 	const MemAddr map_start;
 	const size_t map_size;
 	const MemAddr use_start;

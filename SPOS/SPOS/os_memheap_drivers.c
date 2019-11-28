@@ -13,7 +13,21 @@ static char const PROGMEM intStr[] = "internal";
 
 Heap* heap_list[] = {intHeap}; // We put the heaps in an array for the functions in this file
 
-Heap intHeap__; // I'm not sure how I should initialize this
+#define HEAP_MEMORY (AVR_MEMORY_SRAM - HEAPOFFSET)
+#define HEAP_START (AVR_SRAM_START + HEAPOFFSET)
+
+Heap intHeap__ = {
+	.driver = intSRAM,
+	.alloc_strat = OS_MEM_FIRST, // default strategy
+	.map_start = HEAP_START,
+	.map_size = HEAP_MEMORY/ 3,
+	.use_start = HEAP_START + HEAP_MEMORY / 3, // practically .map_start + .map_size
+	.use_size = HEAP_MEMORY - HEAP_MEMORY / 3,
+	.name = "internal", // as per the Doxygen documentation
+}
+
+#undef HEAP_MEMORY
+#undef HEAP_START
 
 void os_initHeaps(void){
 	for(uint8_t i = 0; i < os_getHeapListLength() - 1; i++){
