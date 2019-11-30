@@ -48,7 +48,7 @@ bool isValidMapAdress(Heap const *heap, MemAddr addr){
 }
 
 bool isValidAddress(Heap const *heap, MemAddr addr){
-	return (isValidUseAddress(heap, addr) && isValidMapAdress(heap,addr));
+	return (isValidUseAddress(heap, addr) || isValidMapAdress(heap,addr));
 }
 
 void setLowNibble (Heap const *heap, MemAddr addr, MemValue value){
@@ -87,42 +87,46 @@ MemValue getHighNibble (Heap const *heap, MemAddr addr){
 	} else return 0;
 }
 
-void setMapEntry(Heap const *heap, MemAddr addr, MemValue value){
-	if(!isValidNibble(value) || !isValidMapAdress(heap, addr)){
-		return;
-	}
-	os_enterCriticalSection();
-	if(addr % 2 == 0){
-	    setHighNibble(heap, addr, value);
-	}
-	else {
-	    setLowNibble(heap, addr, value);
-	}
-	os_leaveCriticalSection();
-}
-
 MemValue os_getMapEntry(Heap const *heap, MemAddr addr){
 	if(!isValidMapAdress(heap, addr)){
 		return 0;
 	}
 	MemAddr map_entry_byte = os_getMapStart(heap) + (addr - os_getUseStart(heap)) / 2;
-	if(addr % 2 == 0) return getHighNibble(heap, map_entry_byte);
-	else return getLowNibble(heap, map_entry_byte);
+	if(addr % 2 == 0) {
+		return getHighNibble(heap, map_entry_byte);
+	} else {
+		return getLowNibble(heap, map_entry_byte);
+	}
+}
+
+void setMapEntry(Heap const *heap, MemAddr addr, MemValue value){
+	if(!isValidNibble(value) || !isValidUseAddress(heap, addr)){
+		return;
+	}
+	os_enterCriticalSection();
+	MemAddr map_entry_byte = os_getMapStart(heap) + (addr - os_getUseStart(heap)) / 2;
+	if(addr % 2 == 0){
+	    setHighNibble(heap, map_entry_byte, value);
+	}
+	else {
+	    setLowNibble(heap, map_entry_byte, value);
+	}
+	os_leaveCriticalSection();
 }
 
 MemAddr os_getFirstByteOfChunk(Heap const *heap, MemAddr addr){
-	if(!isValidUseAddress()){
+	if(!isValidUseAddress(heap, addr)){
 		return 0;
 	}
 	MemValue addr_map_entry = os_getMapEntry(heap, addr);
 	MemAddr iter_addr = addr;
 	if (addr_map_entry == 0){
-		while (os_getMapEntry(iter_addr) == 0 && isValidUseAddress(iter_addr)){
+		while (os_getMapEntry(heap, iter_addr) == 0 && isValidUseAddress(heap, iter_addr)){
 			iter_addr--;
 		}
 		return iter_addr + 1;
 	} else {
-		while (os_getMapEntry(iter_addr) == 0xF && isValidUseAddress(iter_addr)){
+		while (os_getMapEntry(heap, iter_addr) == 0xF && isValidUseAddress(heap, iter_addr)){
 			iter_addr--;
 		}
 		return iter_addr;
@@ -138,14 +142,14 @@ uint16_t os_getChunkSize(Heap const *heap, MemAddr addr){
 	uint16_t chunk_size = 0;
 	MemValue addr_map_entry = os_getMapEntry(heap, addr);
 	if(addr_map_entry != 0){ 
-	    while ((os_getMapEntry(iter_addr) == 0xF || os_getMapEntry(iter_addr) == os_getMapEntry(first_chunk_addr))
-		       && isValidUseAddress(iter_addr)){
+	    while ((os_getMapEntry(heap, iter_addr) == 0xF || os_getMapEntry(heap, iter_addr) == os_getMapEntry(heap, first_chunk_addr))
+		       && isValidUseAddress(heap, iter_addr)){
 	        chunk_size++;
 		    iter_addr++;
 	    }
 	    return chunk_size;
 	} else {
-		while (isValidUseAddress(iter_addr) && os_getMapEntry(iter_addr) == 0){ 
+		while (isValidUseAddress(heap, iter_addr) && os_getMapEntry(heap, iter_addr) == 0){ 
 			chunk_size++;
 			iter_addr++;
 		}

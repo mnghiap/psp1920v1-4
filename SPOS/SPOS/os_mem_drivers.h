@@ -27,5 +27,6 @@ typedef struct MemDriver{
 	void (*write)(MemAddr addr, MemValue value);
 } MemDriver;
 
+MemDriver intSRAM__;
 
 #endif /* OS_MEM_DRIVERS_H_ */

@@ -26,7 +26,7 @@ typedef struct Heap {
 	const size_t map_size;
 	const MemAddr use_start;
 	const size_t use_size;
-	char name[];
+	const char* name;
 } Heap;
 
 void os_initHeaps(void);

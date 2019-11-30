@@ -7,6 +7,7 @@
 
 #include "os_mem_drivers.h"
 #include "defines.h"
+#include "atmega644constants.h"
 
 void initSRAM_internal(void){
     // There is nothing to do here.
@@ -27,5 +28,5 @@ MemDriver intSRAM__ = {
 	.read = readSRAM_internal,
 	.write = writeSRAM_internal,
 	.start = AVR_SRAM_START,
-	.size = AVR_MEMORY_SRAM,
+	.size = AVR_MEMORY_SRAM
 };
