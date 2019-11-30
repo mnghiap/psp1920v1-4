@@ -64,6 +64,12 @@ void os_init(void) {
 	
 	os_initHeaps();
 	
+	// Check whether heap offset is correctly initialized
+	
+	if(os_lookupHeap(0)->map_start != (MemAddr)&(__heap_start)){
+		os_error("Heap start init incorrect");
+	}
+	
     os_initScheduler();
 
     os_coarseSystemTime = 0;

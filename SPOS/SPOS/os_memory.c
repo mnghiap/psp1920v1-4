@@ -140,29 +140,39 @@ uint16_t os_getChunkSize(Heap const *heap, MemAddr addr){
 	MemAddr first_chunk_addr = os_getFirstByteOfChunk(heap, addr); 
 	MemAddr iter_addr = first_chunk_addr;
 	uint16_t chunk_size = 0;
-	MemValue addr_map_entry = os_getMapEntry(heap, addr);
-	if(addr_map_entry != 0){ 
-	    while ((os_getMapEntry(heap, iter_addr) == 0xF || os_getMapEntry(heap, iter_addr) == os_getMapEntry(heap, first_chunk_addr))
-		       && isValidUseAddress(heap, iter_addr)){
+	if(os_getMapEntry(heap, addr) != 0){ 
+		chunk_size++;
+		iter_addr++;
+	    while (os_getMapEntry(heap, iter_addr) == 0xF && isValidUseAddress(heap, iter_addr)){
 	        chunk_size++;
 		    iter_addr++;
 	    }
 	    return chunk_size;
 	} else {
-		while (isValidUseAddress(heap, iter_addr) && os_getMapEntry(heap, iter_addr) == 0){ 
-			chunk_size++;
-			iter_addr++;
-		}
-		return chunk_size;
+		return 0; // size of free chunk is 0
 	}
 }
 
-void os_freeOwnerRestricted (Heap *heap, MemAddr addr, ProcessID owner);
+ProcessID getOwnerOfChunk(Heap const *heap, MemAddr addr){
+	if(!isValidUseAddress(heap, addr)){
+		return 0;
+	} else {
+		return os_getMapEntry(heap, os_getFirstByteOfChunk(heap, addr));
+	}
+}
 
-MemAddr os_malloc(Heap *heap, size_t size);
+void os_freeOwnerRestricted (Heap *heap, MemAddr addr, ProcessID owner){
+	#warning implement something here
+}
 
-void os_free(Heap *heap, MemAddr addr);
+MemAddr os_malloc(Heap *heap, size_t size){
+	#warning implement something here
+}
 
-void os_freeProcessMemory(Heap *heap, ProcessID pid);
+void os_free(Heap *heap, MemAddr addr){
+	#warning implement something here
+}
 
-ProcessID getOwnerOfChunk(Heap const *heap, MemAddr addr);
+void os_freeProcessMemory(Heap *heap, ProcessID pid){
+	#warning implement something here
+}

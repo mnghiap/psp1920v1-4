@@ -183,6 +183,14 @@ ProgramID os_lookupProgramID(Program* program) {
     return INVALID_PROGRAM;
 }
 
+bool os_kill(ProcessID pid){
+	#warning implement something here
+}
+
+void os_dispatcher(){
+	#warning implement something here
+}
+
 /*!
  *  This function is used to execute a program that has been introduced with
  *  os_registerProgram.
