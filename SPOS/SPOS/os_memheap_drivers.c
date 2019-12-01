@@ -15,7 +15,7 @@ const PROGMEM char intStr[] = "internal";
 
 Heap* heap_list[] = {intHeap}; // We put the heaps in an array for the functions in this file
 
-#define HEAP_MEMORY (AVR_MEMORY_SRAM - HEAPOFFSET)
+#define HEAP_MEMORY (AVR_MEMORY_SRAM / 2 - HEAPOFFSET)
 #define HEAP_START (AVR_SRAM_START + HEAPOFFSET)
 
 Heap intHeap__ = {
