@@ -6,6 +6,7 @@
 #include "os_core.h"
 #include "string.h"
 #include "lcd.h"
+#include "os_memheap_drivers.h"
 
 #include <avr/interrupt.h>
 #include <stdbool.h>
@@ -73,8 +74,10 @@ ISR(TIMER2_COMPA_vect) {
 	// Calculate and save Stack Checksum
 	os_processes[os_getCurrentProc()].checksum = os_getStackChecksum(os_getCurrentProc());
 	
-    // 5. set cur. process to OS_PS_READY
-    os_processes[os_getCurrentProc()].state = OS_PS_READY;
+    // 5. set cur. process to OS_PS_READY if it has not terminated yet
+	if(os_processes[os_getCurrentProc()].state == OS_PS_RUNNING){
+        os_processes[os_getCurrentProc()].state = OS_PS_READY;
+	}
 	
 	// Open task manager if ESC + ENTER are pressed
 	if(os_getInput() == 0b1001){
@@ -184,11 +187,29 @@ ProgramID os_lookupProgramID(Program* program) {
 }
 
 bool os_kill(ProcessID pid){
-	#warning implement something here
+	if(pid == 0 || pid >= MAX_NUMBER_OF_PROCESSES){
+		return false;
+	} else {
+		os_enterCriticalSection();
+		os_processes[pid].state = OS_PS_UNUSED;
+		os_freeProcessMemory(intSRAM, pid);
+		os_leaveCriticalSection();
+		return true;
+	}
 }
 
-void os_dispatcher(){
-	#warning implement something here
+void os_dispatcher(void){
+	// determine the active process and its program function to give it to a function pointer
+	void (*program_pointer)(void) = os_lookupProgramFunction(os_processes[os_getCurrentProc()].progID);
+	
+	// call the program function with the pointer
+	(*program_pointer)();
+	
+	// kill the process after it has been terminated
+	os_kill(os_getCurrentProc());
+	
+	// wait for scheduler to choose next process
+	while(1){};
 }
 
 /*!
@@ -223,7 +244,7 @@ ProcessID os_exec(ProgramID programID, Priority priority) {
     }
 
     // 2. load program index
-    Program* program_ptr = os_lookupProgramFunction(programID);
+    Program* program_ptr = &(os_dispatcher);
     if (program_ptr == NULL){
 		os_leaveCriticalSection();
         return INVALID_PROCESS;

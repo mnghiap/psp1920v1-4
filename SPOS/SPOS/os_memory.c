@@ -161,12 +161,18 @@ ProcessID getOwnerOfChunk(Heap const *heap, MemAddr addr){
 	}
 }
 
-void os_freeOwnerRestricted (Heap *heap, MemAddr addr, ProcessID owner){
+void os_freeOwnerRestricted(Heap *heap, MemAddr addr, ProcessID owner){
 	#warning implement something here
 }
 
 MemAddr os_malloc(Heap *heap, size_t size){
-	#warning implement something here
+	switch(heap->alloc_strat){
+		case OS_MEM_FIRST: return os_Memory_FirstFit(heap, size); break;	
+		case OS_MEM_NEXT: return os_Memory_NextFit(heap, size); break;	
+		case OS_MEM_BEST: return os_Memory_BestFit(heap, size); break;	
+		case OS_MEM_WORST: return os_Memory_WorstFit(heap, size); break;	
+		default: return 0; break;
+	}
 }
 
 void os_free(Heap *heap, MemAddr addr){
