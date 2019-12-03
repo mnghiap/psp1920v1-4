@@ -13,20 +13,27 @@
 #include "os_memheap_drivers.h"
 #include "os_scheduler.h"
 
-#define os_getMapSize(HEAP) (HEAP->map_size)
-#define os_getUseSize(HEAP) (HEAP->use_size)
-#define os_getMapStart(HEAP) (HEAP->map_start)
-#define os_getUseStart(HEAP) (HEAP->use_start)
+#define getLowNibble(HEAP, ADDR) (HEAP->driver->read(ADDR) & 0x0F);
+#define getHighNibble(HEAP, ADDR) ((HEAP->driver->read(ADDR) & 0xF0) >> 4);
 
 MemAddr os_malloc(Heap *heap, size_t size);
 
 void os_free(Heap *heap, MemAddr addr);
 
 MemValue os_getMapEntry(Heap const *heap, MemAddr addr);
+void os_setMapEntry(Heap const *heap, MemAddr addr, MemValue value);
 
 void os_freeProcessMemory(Heap *heap, ProcessID pid);
 
+MemAddr os_getFirstByteOfChunk(Heap const *heap, MemAddr addr);
 uint16_t os_getChunkSize(Heap const *heap, MemAddr addr);
+
+ProcessID os_getOwnerOfChunk(Heap const *heap, MemAddr addr);
+
+inline size_t os_getMapSize(Heap const* heap) { return heap->map_size; }
+inline size_t os_getUseSize(Heap const* heap) { return heap->use_size; }
+inline MemAddr os_getMapStart(Heap const* heap) { return heap->map_start; }
+inline MemAddr os_getUseStart(Heap const* heap) { return heap->use_start; }
 
 MemAddr os_getFirstByteOfChunk(Heap const *heap, MemAddr addr);
 

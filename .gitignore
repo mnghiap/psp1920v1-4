@@ -80,3 +80,5 @@ bin/
 *.atsuo
 
 # End of https://www.gitignore.io/api/atmelstudio
+
+*.pdf

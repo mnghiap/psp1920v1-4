@@ -11,9 +11,6 @@
 #include "os_core.h"
 #include <stdbool.h>
 
-#define getLowNibble(HEAP, ADDR) (HEAP->driver->read(ADDR) & 0x0F);
-#define getHighNibble(HEAP, ADDR) ((HEAP->driver->read(ADDR) & 0xF0) >> 4);
-
 #define isValidNibble(VALUE) (VALUE >= 0x0 && VALUE <= 0xF)
 
 /************************************************************************/
@@ -32,9 +29,9 @@ AllocStrategy os_getAllocationStrategy(Heap const *heap){
 }
 
 void setLowNibble (Heap const *heap, MemAddr addr, MemValue value){
-	if(!isValidAddress(heap, addr) || !isValidNibble(value)){
+	if(!isValidAddress(heap, addr) || !isValidNibble(value))
 		return;
-	}
+	 
 	os_enterCriticalSection();
 	MemValue new_value = heap->driver->read(addr);
 	new_value &= 0b11110000;
@@ -44,9 +41,9 @@ void setLowNibble (Heap const *heap, MemAddr addr, MemValue value){
 }
 
 void setHighNibble (Heap const *heap, MemAddr addr, MemValue value){
-	if(!isValidAddress(heap, addr) || !isValidNibble(value)){
+	if(!isValidAddress(heap, addr) || !isValidNibble(value))
 		return;
-	}
+	 
 	os_enterCriticalSection();
 	MemValue new_value = heap->driver->read(addr);
 	new_value &= 0b00001111;
@@ -56,7 +53,7 @@ void setHighNibble (Heap const *heap, MemAddr addr, MemValue value){
 }
 
 MemValue os_getMapEntry(Heap const *heap, MemAddr addr){
-	if(!isValidMapAddress(heap, addr))
+	if(!isValidUseAddress(heap, addr))
 		return 0;
 	
 	MemAddr map_entry_byte = os_getMapStart(heap) + (addr - os_getUseStart(heap)) / 2;
@@ -66,7 +63,7 @@ MemValue os_getMapEntry(Heap const *heap, MemAddr addr){
 		return getLowNibble(heap, map_entry_byte);
 }
 
-void setMapEntry(Heap const *heap, MemAddr addr, MemValue value){
+void os_setMapEntry(Heap const *heap, MemAddr addr, MemValue value){
 	if(!isValidNibble(value) || !isValidUseAddress(heap, addr))
 		return;
 	 
@@ -81,9 +78,9 @@ void setMapEntry(Heap const *heap, MemAddr addr, MemValue value){
 }
 
 MemAddr os_getFirstByteOfChunk(Heap const *heap, MemAddr addr){
-	if(!isValidUseAddress(heap, addr)){
+	if(!isValidUseAddress(heap, addr))
 		return 0;
-	}
+	 
 	MemValue addr_map_entry = os_getMapEntry(heap, addr);
 	MemAddr iter_addr = addr;
 	if (addr_map_entry == 0){
@@ -119,7 +116,7 @@ uint16_t os_getChunkSize(Heap const *heap, MemAddr addr){
 	}
 }
 
-ProcessID getOwnerOfChunk(Heap const *heap, MemAddr addr){
+ProcessID os_getOwnerOfChunk(Heap const *heap, MemAddr addr){
 	if(!isValidUseAddress(heap, addr)){
 		return 0;
 	} else {
@@ -128,7 +125,22 @@ ProcessID getOwnerOfChunk(Heap const *heap, MemAddr addr){
 }
 
 void os_freeOwnerRestricted(Heap *heap, MemAddr addr, ProcessID owner){
-	#warning implement something here
+    if (!isValidUseAddress(heap, addr))
+        return; 
+         
+    os_enterCriticalSection();
+    if (os_getOwnerOfChunk(heap, addr) != owner) {
+        os_errorPStr(PSTR("ERR: cur. process not owner of SRAM to be freed"));
+        return;
+    }        
+   
+    // settings them here, 'cause otherwise os_... would be executed every iteration  
+    MemAddr first_byte = os_getFirstByteOfChunk(heap, addr);
+    MemAddr end_byte = os_getChunkSize(heap, addr) + first_byte;
+    for (MemAddr cur_byte = first_byte; cur_byte < end_byte; cur_byte++) {
+        os_setMapEntry(heap, cur_byte, 0);
+    }
+    os_leaveCriticalSection();
 }
 
 MemAddr os_malloc(Heap *heap, size_t size){
@@ -142,9 +154,16 @@ MemAddr os_malloc(Heap *heap, size_t size){
 }
 
 void os_free(Heap *heap, MemAddr addr){
-	#warning implement something here
+    os_freeOwnerRestricted(heap, addr, os_getCurrentProc());
 }
 
 void os_freeProcessMemory(Heap *heap, ProcessID pid){
-	#warning implement something here
+    os_enterCriticalSection();
+    for (MemAddr addr = os_getMapStart(heap); addr < os_getMapStart(heap) + os_getMapSize(heap); ) {
+        uint16_t size = os_getChunkSize(heap, addr);
+        if (os_getOwnerOfChunk(heap, addr) == pid)
+            os_freeOwnerRestricted(heap, addr, pid);
+        addr += size;
+    }
+    os_leaveCriticalSection();
 }

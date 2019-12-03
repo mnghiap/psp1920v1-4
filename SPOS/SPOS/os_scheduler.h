@@ -30,7 +30,7 @@ typedef enum SchedulingStrategy {
 } SchedulingStrategy;
 
 // Change this define to reflect the number of available strategies:
-#define SCHEDULING_STRATEGY_COUNT 2
+#define SCHEDULING_STRATEGY_COUNT 5
 
 //----------------------------------------------------------------------------
 // Function headers
@@ -53,6 +53,8 @@ Program* os_lookupProgramFunction(ProgramID programID);
 
 //! Looks up the ID (i.e. index) of a program and returns INVALID_PROGRAM on failure
 ProgramID os_lookupProgramID(Program* program);
+
+bool os_kill(ProcessID pid);
 
 //! Executes a process by instantiating a program
 ProcessID os_exec(ProgramID programID, Priority priority);

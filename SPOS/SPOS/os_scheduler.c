@@ -7,6 +7,7 @@
 #include "string.h"
 #include "lcd.h"
 #include "os_memheap_drivers.h"
+#include "os_memory.h"
 
 #include <avr/interrupt.h>
 #include <stdbool.h>
@@ -187,15 +188,27 @@ ProgramID os_lookupProgramID(Program* program) {
 }
 
 bool os_kill(ProcessID pid){
-	if(pid == 0 || pid >= MAX_NUMBER_OF_PROCESSES){
+	if(pid == 0 || pid >= MAX_NUMBER_OF_PROCESSES 
+            || os_getProcessSlot(pid)->state == OS_PS_UNUSED){
+        os_errorPStr(PSTR("ERR: Process to be killed is invalid"));
 		return false;
-	} else {
-		os_enterCriticalSection();
-		os_processes[pid].state = OS_PS_UNUSED;
-		os_freeProcessMemory(intSRAM, pid);
-		os_leaveCriticalSection();
-		return true;
-	}
+	} 
+	os_enterCriticalSection();
+    os_getProcessSlot(pid)->state = OS_PS_UNUSED;
+    for (uint8_t i = 0; i < os_getHeapListLength(); i++)
+	    os_freeProcessMemory(os_lookupHeap(i), pid);
+        
+    if (pid == os_getCurrentProc()) {
+        // reset critical section count back to 1, to 
+        // prevent blocking 
+        criticalSectionCount = 1;
+        currentProc = 0;
+        os_leaveCriticalSection();
+        while (1);
+    } 
+    
+	os_leaveCriticalSection();
+	return true;
 }
 
 void os_dispatcher(void){
@@ -207,9 +220,6 @@ void os_dispatcher(void){
 	
 	// kill the process after it has been terminated
 	os_kill(os_getCurrentProc());
-	
-	// wait for scheduler to choose next process
-	while(1){};
 }
 
 /*!
