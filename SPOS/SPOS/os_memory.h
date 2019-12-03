@@ -13,6 +13,11 @@
 #include "os_memheap_drivers.h"
 #include "os_scheduler.h"
 
+#define os_getMapSize(HEAP) (HEAP->map_size)
+#define os_getUseSize(HEAP) (HEAP->use_size)
+#define os_getMapStart(HEAP) (HEAP->map_start)
+#define os_getUseStart(HEAP) (HEAP->use_start)
+
 MemAddr os_malloc(Heap *heap, size_t size);
 
 void os_free(Heap *heap, MemAddr addr);
@@ -20,14 +25,6 @@ void os_free(Heap *heap, MemAddr addr);
 MemValue os_getMapEntry(Heap const *heap, MemAddr addr);
 
 void os_freeProcessMemory(Heap *heap, ProcessID pid);
-
-size_t os_getMapSize(Heap const *heap);
-
-size_t os_getUseSize(Heap const *heap);
-
-MemAddr os_getMapStart(Heap const *heap);
-
-MemAddr os_getUseStart(Heap const *heap);
 
 uint16_t os_getChunkSize(Heap const *heap, MemAddr addr);
 
