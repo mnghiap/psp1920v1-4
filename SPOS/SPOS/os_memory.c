@@ -16,8 +16,25 @@
 /************************************************************************/
 /* Check whether given address is inside the valid heap memory range.   */
 /************************************************************************/
-#define isValidUseAddress(HEAP, ADDR) (ADDR >= os_getUseStart(HEAP) && ADDR < os_getUseStart(HEAP) + os_getUseSize(HEAP))
-#define isValidMapAddress(HEAP, ADDR) (ADDR >= os_getMapStart(HEAP) && ADDR < os_getUseStart(HEAP))
+bool isValidUseAddressWithError(Heap const *heap, MemAddr addr, bool break_on_error) {
+	bool res = (addr >= os_getUseStart(heap) && addr < os_getUseStart(heap) + os_getUseSize(heap));
+	if (!res && break_on_error) 
+		os_error("addr. outside USE range");
+	return res;
+}
+
+bool isValidMapAddressWithError(Heap const *heap, MemAddr addr, bool break_on_error) {
+	bool res = (addr >= os_getMapStart(heap) && addr < os_getMapStart(heap) + os_getMapSize(heap));
+	if (!res && break_on_error) 
+		os_error("addr. outside MAP range");
+	return res;
+}
+
+#define verifyUseAddressWithError(HEAP, ADDR) (isValidUseAddressWithError(HEAP, ADDR, true))
+#define verifyMapAddressWithError(HEAP, ADDR) (isValidMapAddressWithError(HEAP, ADDR, true))
+#define isValidUseAddress(HEAP, ADDR) (isValidUseAddressWithError(HEAP, ADDR, false))
+#define isValidMapAddress(HEAP, ADDR) (isValidMapAddressWithError(HEAP, ADDR, false))
+
 #define isValidAddress(HEAP, ADDR) (isValidUseAddress(HEAP, ADDR) || isValidMapAddress(HEAP,ADDR))
 
 void os_setAllocationStrategy(Heap *heap, AllocStrategy allocStrat){
@@ -53,7 +70,7 @@ void setHighNibble (Heap const *heap, MemAddr addr, MemValue value){
 }
 
 MemValue os_getMapEntry(Heap const *heap, MemAddr addr){
-	if(!isValidUseAddress(heap, addr))
+	if(!verifyUseAddressWithError(heap, addr))
 		return 0;
 	
 	MemAddr map_entry_byte = os_getMapStart(heap) + (addr - os_getUseStart(heap)) / 2;
@@ -64,7 +81,7 @@ MemValue os_getMapEntry(Heap const *heap, MemAddr addr){
 }
 
 void os_setMapEntry(Heap const *heap, MemAddr addr, MemValue value){
-	if(!isValidNibble(value) || !isValidUseAddress(heap, addr))
+	if(!isValidNibble(value) || !verifyUseAddressWithError(heap, addr))
 		return;
 	 
 	os_enterCriticalSection();
@@ -78,18 +95,18 @@ void os_setMapEntry(Heap const *heap, MemAddr addr, MemValue value){
 }
 
 MemAddr os_getFirstByteOfChunk(Heap const *heap, MemAddr addr){
-	if(!isValidUseAddress(heap, addr))
+	if(!verifyUseAddressWithError(heap, addr))
 		return 0;
 	 
 	MemValue addr_map_entry = os_getMapEntry(heap, addr);
 	MemAddr iter_addr = addr;
 	if (addr_map_entry == 0){
-		while (os_getMapEntry(heap, iter_addr) == 0 && isValidUseAddress(heap, iter_addr)){
+		while (isValidUseAddress(heap, iter_addr) && os_getMapEntry(heap, iter_addr) == 0){
 			iter_addr--;
 		}
 		return iter_addr + 1;
 	} else {
-		while (os_getMapEntry(heap, iter_addr) == 0xF && isValidUseAddress(heap, iter_addr)){
+		while (isValidUseAddress(heap, iter_addr) && os_getMapEntry(heap, iter_addr) == 0xF){
 			iter_addr--;
 		}
 		return iter_addr;
@@ -101,7 +118,7 @@ uint16_t os_getChunkSize(Heap const *heap, MemAddr addr){
 }
 
 uint16_t os_getChunkSizeUnrestricted(Heap const *heap, MemAddr addr, bool is_restricted) {
-	if(!isValidUseAddress(heap, addr))
+	if(!verifyUseAddressWithError(heap, addr))
 		return 0;
 	 
 	MemAddr first_chunk_addr = os_getFirstByteOfChunk(heap, addr); 
@@ -114,7 +131,7 @@ uint16_t os_getChunkSizeUnrestricted(Heap const *heap, MemAddr addr, bool is_res
 	
 	chunk_size++;
 	iter_addr++;
-	while (os_getMapEntry(heap, iter_addr) == look_for && isValidUseAddress(heap, iter_addr)){
+	while (isValidUseAddress(heap, iter_addr) && os_getMapEntry(heap, iter_addr) == look_for){
 	    chunk_size++;
 		iter_addr++;
 	}
@@ -122,7 +139,7 @@ uint16_t os_getChunkSizeUnrestricted(Heap const *heap, MemAddr addr, bool is_res
 }
 
 ProcessID os_getOwnerOfChunk(Heap const *heap, MemAddr addr){
-	if(!isValidUseAddress(heap, addr)){
+	if(!verifyUseAddressWithError(heap, addr)){
 		return 0;
 	} else {
 		return os_getMapEntry(heap, os_getFirstByteOfChunk(heap, addr));
@@ -130,11 +147,10 @@ ProcessID os_getOwnerOfChunk(Heap const *heap, MemAddr addr){
 }
 
 void os_freeOwnerRestricted(Heap *heap, MemAddr addr, ProcessID owner){
-    if (!isValidUseAddress(heap, addr))
+    if (!verifyUseAddressWithError(heap, addr))
         return; 
          
     os_enterCriticalSection();
-	lcd_clear();
     if (os_getOwnerOfChunk(heap, addr) != owner) {
         os_errorPStr(PSTR("free: proc. not own. of heap"));
         return;
@@ -183,8 +199,8 @@ void os_free(Heap *heap, MemAddr addr){
 
 void os_freeProcessMemory(Heap *heap, ProcessID pid){
     os_enterCriticalSection();
-    for (MemAddr addr = os_getMapStart(heap); addr < os_getMapStart(heap) + os_getMapSize(heap); ) {
-        uint16_t size = os_getChunkSize(heap, addr);
+    for (MemAddr addr = os_getUseStart(heap); addr < os_getUseStart(heap) + os_getUseSize(heap); ) {
+        uint16_t size = os_getChunkSizeUnrestricted(heap, addr, false);
         if (os_getOwnerOfChunk(heap, addr) == pid)
             os_freeOwnerRestricted(heap, addr, pid);
         addr += size;

@@ -190,7 +190,7 @@ ProgramID os_lookupProgramID(Program* program) {
 bool os_kill(ProcessID pid){
 	if(pid == 0 || pid >= MAX_NUMBER_OF_PROCESSES 
             || os_getProcessSlot(pid)->state == OS_PS_UNUSED){
-        os_errorPStr(PSTR("ERR: Process to be killed is invalid"));
+        //os_errorPStr(PSTR("Kill: Process is invalid"));
 		return false;
 	} 
 	os_enterCriticalSection();
