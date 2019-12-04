@@ -13,18 +13,17 @@ MemAddr os_Memory_FirstFit(Heap *heap, size_t size){
     MemAddr start = os_getUseStart(heap);
     MemAddr end = os_getUseSize(heap) + os_getUseStart(heap);
     
-    for (volatile MemAddr addr = start; addr < start + end; ) {
+    for (volatile MemAddr addr = start; addr < end; ) {
 		MemAddr chunk_size = os_getChunkSizeUnrestricted(heap, addr, false);
         if (os_getOwnerOfChunk(heap, addr) == 0 && chunk_size >= size) {
             MemAddr free_space = os_getFirstByteOfChunk(heap, addr); 
             os_leaveCriticalSection();
             return free_space;
         }
-		
 		addr += chunk_size;
     } 
     os_leaveCriticalSection();
-    return -1;
+    return 0;
 }
 
 MemAddr os_Memory_NextFit(Heap *heap, size_t size){

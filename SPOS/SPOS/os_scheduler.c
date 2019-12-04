@@ -188,12 +188,13 @@ ProgramID os_lookupProgramID(Program* program) {
 }
 
 bool os_kill(ProcessID pid){
+	os_enterCriticalSection();
 	if(pid == 0 || pid >= MAX_NUMBER_OF_PROCESSES 
             || os_getProcessSlot(pid)->state == OS_PS_UNUSED){
         //os_errorPStr(PSTR("Kill: Process is invalid"));
+		os_leaveCriticalSection();
 		return false;
 	} 
-	os_enterCriticalSection();
     os_getProcessSlot(pid)->state = OS_PS_UNUSED;
     for (uint8_t i = 0; i < os_getHeapListLength(); i++)
 	    os_freeProcessMemory(os_lookupHeap(i), pid);
