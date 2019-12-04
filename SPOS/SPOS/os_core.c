@@ -66,7 +66,7 @@ void os_init(void) {
 	
 	// Check whether heap offset is big enough
 	if((MemAddr)&(__heap_start) >= AVR_SRAM_START + HEAPOFFSET){
-		os_error("Heap offset too small");
+		os_error("os_init: Heap offset too small");
 	}
 	
     os_initScheduler();
