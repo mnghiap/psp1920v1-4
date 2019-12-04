@@ -13,12 +13,17 @@ MemAddr os_Memory_FirstFit(Heap *heap, size_t size){
     MemAddr start = os_getUseStart(heap);
     MemAddr end = os_getUseSize(heap) + os_getUseStart(heap);
     
-    for (MemAddr addr = start; addr < start + end; ) {
-        if (os_getOwnerOfChunk(heap, addr) == 0 && os_getChunkSize(heap, addr) >= size) {
+    for (volatile MemAddr addr = start; addr < start + end; ) {
+		MemAddr chunk_size = os_getChunkSizeUnrestricted(heap, addr, false);
+        if (os_getOwnerOfChunk(heap, addr) == 0 && chunk_size >= size) {
             MemAddr free_space = os_getFirstByteOfChunk(heap, addr); 
             os_leaveCriticalSection();
             return free_space;
         }
+		//lcd_clear();
+		//lcd_writeHexByte(os_getOwnerOfChunk(heap, addr));
+		
+		addr += chunk_size;
     } 
     os_leaveCriticalSection();
     return -1;

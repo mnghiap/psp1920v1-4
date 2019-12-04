@@ -44,5 +44,5 @@ Heap* os_lookupHeap(uint8_t index){
 }
 
 size_t os_getHeapListLength (void){
-	return sizeof(heap_list);
+	return sizeof(heap_list) / sizeof(Heap*);
 }

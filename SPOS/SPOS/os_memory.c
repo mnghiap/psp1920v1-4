@@ -97,23 +97,28 @@ MemAddr os_getFirstByteOfChunk(Heap const *heap, MemAddr addr){
 }
 
 uint16_t os_getChunkSize(Heap const *heap, MemAddr addr){
+	return os_getChunkSizeUnrestricted(heap, addr, true);
+}
+
+uint16_t os_getChunkSizeUnrestricted(Heap const *heap, MemAddr addr, bool is_restricted) {
 	if(!isValidUseAddress(heap, addr))
 		return 0;
 	 
 	MemAddr first_chunk_addr = os_getFirstByteOfChunk(heap, addr); 
 	MemAddr iter_addr = first_chunk_addr;
 	uint16_t chunk_size = 0;
-	if(os_getMapEntry(heap, addr) != 0){ 
-		chunk_size++;
+	MemValue look_for = os_getMapEntry(heap, first_chunk_addr) ? 0xF : 0;
+	
+	if (is_restricted && look_for == 0)
+		return 0;
+	
+	chunk_size++;
+	iter_addr++;
+	while (os_getMapEntry(heap, iter_addr) == look_for && isValidUseAddress(heap, iter_addr)){
+	    chunk_size++;
 		iter_addr++;
-	    while (os_getMapEntry(heap, iter_addr) == 0xF && isValidUseAddress(heap, iter_addr)){
-	        chunk_size++;
-		    iter_addr++;
-	    }
-	    return chunk_size;
-	} else {
-		return 0; // size of free chunk is 0
 	}
+	return chunk_size;
 }
 
 ProcessID os_getOwnerOfChunk(Heap const *heap, MemAddr addr){
@@ -129,8 +134,9 @@ void os_freeOwnerRestricted(Heap *heap, MemAddr addr, ProcessID owner){
         return; 
          
     os_enterCriticalSection();
+	lcd_clear();
     if (os_getOwnerOfChunk(heap, addr) != owner) {
-        os_errorPStr(PSTR("ERR: cur. process not owner of SRAM to be freed"));
+        os_errorPStr(PSTR("free: proc. not own. of heap"));
         return;
     }        
    
@@ -144,13 +150,25 @@ void os_freeOwnerRestricted(Heap *heap, MemAddr addr, ProcessID owner){
 }
 
 MemAddr os_malloc(Heap *heap, size_t size){
+	MemAddr addr = 0;
 	switch(heap->alloc_strat){
-		case OS_MEM_FIRST: return os_Memory_FirstFit(heap, size); break;	
-		case OS_MEM_NEXT: return os_Memory_NextFit(heap, size); break;	
-		case OS_MEM_BEST: return os_Memory_BestFit(heap, size); break;	
-		case OS_MEM_WORST: return os_Memory_WorstFit(heap, size); break;	
+		case OS_MEM_FIRST: addr = os_Memory_FirstFit(heap, size); break;	
+		case OS_MEM_NEXT: addr = os_Memory_NextFit(heap, size); break;	
+		case OS_MEM_BEST: addr = os_Memory_BestFit(heap, size); break;	
+		case OS_MEM_WORST: addr = os_Memory_WorstFit(heap, size); break;	
 		default: return 0; break;
 	}
+	
+	if (addr <= 0) {
+		os_errorPStr(PSTR("malloc: No free space found"));
+		return 0;
+	}
+	
+	for (MemAddr iter = addr; iter < addr + size; iter++)
+		os_setMapEntry(heap, iter, 0xF);
+	// define owner
+	os_setMapEntry(heap, addr, os_getCurrentProc());
+	return addr;
 }
 
 void os_free(Heap *heap, MemAddr addr){
