@@ -20,8 +20,6 @@ MemAddr os_Memory_FirstFit(Heap *heap, size_t size){
             os_leaveCriticalSection();
             return free_space;
         }
-		//lcd_clear();
-		//lcd_writeHexByte(os_getOwnerOfChunk(heap, addr));
 		
 		addr += chunk_size;
     } 

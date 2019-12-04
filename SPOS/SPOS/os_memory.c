@@ -150,6 +150,7 @@ void os_freeOwnerRestricted(Heap *heap, MemAddr addr, ProcessID owner){
 }
 
 MemAddr os_malloc(Heap *heap, size_t size){
+	os_enterCriticalSection();
 	MemAddr addr = 0;
 	switch(heap->alloc_strat){
 		case OS_MEM_FIRST: addr = os_Memory_FirstFit(heap, size); break;	
@@ -161,13 +162,18 @@ MemAddr os_malloc(Heap *heap, size_t size){
 	
 	if (addr <= 0) {
 		os_errorPStr(PSTR("malloc: No free space found"));
+		os_leaveCriticalSection();
 		return 0;
 	}
 	
-	for (MemAddr iter = addr; iter < addr + size; iter++)
+	for (MemAddr iter = addr; iter < addr + size; iter++) {
+		if (os_getMapEntry(heap, iter) != 0)
+			os_error("Malloc: overwriten data");
 		os_setMapEntry(heap, iter, 0xF);
+	}
 	// define owner
 	os_setMapEntry(heap, addr, os_getCurrentProc());
+	os_leaveCriticalSection();
 	return addr;
 }
 
