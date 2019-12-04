@@ -203,7 +203,7 @@ bool os_kill(ProcessID pid){
         // reset critical section count back to 1, to 
         // prevent blocking 
         criticalSectionCount = 1;
-        currentProc = 0;
+        //currentProc = 0;
         os_leaveCriticalSection();
         while (1);
     } 
