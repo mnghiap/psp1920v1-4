@@ -94,6 +94,8 @@ void os_errorPStr(char const* str) {
     do {
         input = os_getInput();
     } while(input != 0b1001);
+	lcd_writeString("..");
     os_waitForNoInput();
+	lcd_clear();
     SREG = SREGbak;  // return action
 }
