@@ -149,11 +149,36 @@ bool os_checkAutostartProgram(ProgramID programID) {
  *  and processor time no other process wants to have.
  */
 PROGRAM(0, AUTOSTART) {
-    for (;;) {
+	uint64_t CLOCK[5] = {
+		LCD_CC_CLOCK_1_BITMAP,
+		LCD_CC_CLOCK_2_BITMAP,
+		LCD_CC_CLOCK_3_BITMAP,
+		LCD_CC_CLOCK_4a_BITMAP,
+		LCD_CC_CLOCK_4b_BITMAP
+	};
+	
+//	for (int i = 0; i < 5; i++)
+//		lcd_registerCustomChar(i, CLOCK[i]);
+	
+	#define FACTOR 10
+	int i = 0;
+    for (;;i = (i+1)%(4*FACTOR)) {		
+//		lcd_clear();
+		
+		if (i%FACTOR == 0) {
+			int ni = i/FACTOR;
+			lcd_registerCustomChar(0, CLOCK[ni]);
+			lcd_registerCustomChar(1, (ni == 3)?CLOCK[4]:0);
+		}
+		
+		lcd_clear();
+		lcd_writeChar(0);
+		lcd_writeChar(1);
       //  lcd_clear();
-        lcd_writeProgString(PSTR("."));
-        delayMs(DEFAULT_OUTPUT_DELAY*2);
+       // lcd_writeProgString(PSTR("."));
+        delayMs(100);
     }
+	#undef FACTOR
 }
 
 /*!

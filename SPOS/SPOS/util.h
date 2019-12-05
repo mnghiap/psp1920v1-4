@@ -143,4 +143,55 @@ void delayMs(uint16_t ms);
         "reti                                \n\t" \
     );
 
+
+// Waiting clock - Custom Chars
+#define LCD_CC_CLOCK_1_BITMAP (CUSTOM_CHAR (\
+0b11111, \
+0b11111, \
+0b01110, \
+0b00100, \
+0b01010, \
+0b10001, \
+0b11111, 0))
+
+#define LCD_CC_CLOCK_2_BITMAP (CUSTOM_CHAR (\
+0b11111, \
+0b10001, \
+0b01110, \
+0b00100, \
+0b01010, \
+0b11111, \
+0b11111, 0))
+
+#define LCD_CC_CLOCK_3_BITMAP (CUSTOM_CHAR (\
+0b11111, \
+0b10001, \
+0b01010, \
+0b00100, \
+0b01110, \
+0b11111, \
+0b11111, 0))
+
+#define LCD_CC_CLOCK_4a_BITMAP (CUSTOM_CHAR (\
+0b00000, \
+0b00110, \
+0b00101, \
+0b00100, \
+0b00101, \
+0b00110, \
+0b00000, 0))
+
+#define LCD_CC_CLOCK_4b_BITMAP (CUSTOM_CHAR (\
+0b00000, \
+0b01100, \
+0b11100, \
+0b11100, \
+0b11100, \
+0b01100, \
+0b00000, 0))
+
+
+
+
 #endif
+
