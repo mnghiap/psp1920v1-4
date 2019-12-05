@@ -199,22 +199,10 @@ void os_free(Heap *heap, MemAddr addr){
 
 void os_freeProcessMemory(Heap *heap, ProcessID pid){
     os_enterCriticalSection();
-    //for (MemAddr addr = os_getUseStart(heap); addr < os_getUseStart(heap) + os_getUseSize(heap); ) {
-    //    uint16_t size = os_getChunkSizeUnrestricted(heap, addr, false);
-    //    if (os_getOwnerOfChunk(heap, addr) == pid)
-    //        os_freeOwnerRestricted(heap, addr, pid);
-    //    addr += size;
-    //}
-	
-	bool in_found = false;
-	for (MemAddr addr = os_getUseStart(heap); addr < os_getUseStart(heap) + os_getUseSize(heap); addr++) {
-		if (os_getMapEntry(heap, addr) == pid) {
-			in_found = true;
-		} else if (os_getMapEntry(heap, addr) != 0xF)
-			in_found = false;
-		if (in_found)
-			os_setMapEntry(heap, addr, 0);
-		
+	for (MemAddr addr = os_getUseStart(heap); addr < os_getUseStart(heap) + os_getUseSize(heap);) {
+		if (os_getMapEntry(heap, addr) == pid)
+			os_freeOwnerRestricted(heap, addr, pid);
+		addr = os_getChunkSizeUnrestricted(heap, addr, false) + os_getFirstByteOfChunk(heap, addr);
 	}
     os_leaveCriticalSection();
 }
