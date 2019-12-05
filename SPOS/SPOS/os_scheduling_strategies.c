@@ -41,31 +41,7 @@ void os_resetProcessSchedulingInformation(ProcessID id) {
     schedulingInfo.age[id] = 0;
 }
 
-/*! 
- *  This function returns the next process in the process array that is ready to run,
- *  starting from the current process. It only returns 0 (the idle process) if no other  
- *  process except than the idle process is in ready state.
- *
- *  \param processes An array holding the processes to choose the next process from.
- *  \param current The id of the current process.
- *  \return The next process after current process that is in ready state. 
- */
-#define length MAX_NUMBER_OF_PROCESSES //convenient naming
-ProcessID os_getNextReadyProcess(Process const processes[], ProcessID current) {
-	ProcessID afterCurrent = (current + 1) % length;
-	ProcessID nextProcessID = afterCurrent; //The search starts at the process after the current one
-	do {
-		if (processes[nextProcessID].state != OS_PS_READY){ //Not ready
-			nextProcessID = (nextProcessID + 1) % length; //Go to next process
-		} else if (nextProcessID == 0){
-			nextProcessID = (nextProcessID + 1) % length; //We ignore the idle process and continue the search
-		} else {
-			return nextProcessID; //Such process found
-		}
-	} while (nextProcessID != afterCurrent);
-	return 0; //All process checked, no ready found other than idle
-}
-#undef length
+
 
 /*!
  *  This function implements the even strategy. Every process gets the same
@@ -78,7 +54,25 @@ ProcessID os_getNextReadyProcess(Process const processes[], ProcessID current) {
  *  \return The next process to be executed determined on the basis of the even strategy.
  */
 ProcessID os_Scheduler_Even(Process const processes[], ProcessID current) {
-    return os_getNextReadyProcess(processes, current); //Straightforward go to the next ready one
+	ProcessID next = current + 1;
+	uint8_t returnIdle = 1;
+	for(uint8_t i = next; i < MAX_NUMBER_OF_PROCESSES; i++){
+		if(processes[i].state == OS_PS_READY){
+			next = i;
+			returnIdle = 0;
+			break;
+		}
+	}
+	for(uint8_t j = 1; j <= current; j++){
+		if(processes[j].state == OS_PS_READY && returnIdle == 1){
+			next = j;
+			returnIdle = 0;
+			break;
+		}
+	}
+	if (returnIdle == 1){
+		return 0;
+	} else return next;
 }
 
 /*!
@@ -108,11 +102,14 @@ uint8_t os_countReadyProcesses(Process const processes[]) {
  *  \return The next process to be executed determined on the basis of the random strategy.
  */
 ProcessID os_Scheduler_Random(Process const processes[], ProcessID current) {
+	if(os_Scheduler_Even(processes, current) == 0){
+		return 0;
+	}
 	ProcessID nextProcessID = current;
     uint8_t count = os_countReadyProcesses(processes); //Number of ready processes
-	uint8_t randomNumber = rand() % count; 
+	uint8_t randomNumber = 1 + (rand() % count); 
 	for(uint16_t i = 0; i < randomNumber; i++){
-		nextProcessID = os_getNextReadyProcess(processes, nextProcessID);
+		nextProcessID = os_Scheduler_Even(processes, current);
 	};
 	return nextProcessID;
 }
@@ -128,16 +125,22 @@ ProcessID os_Scheduler_Random(Process const processes[], ProcessID current) {
  *  \param current The id of the current process.
  *  \return The next process to be executed determined on the basis of the round robin strategy.
  */
+#define timeSlice schedulingInfo.timeSlice
 ProcessID os_Scheduler_RoundRobin(Process const processes[], ProcessID current) {
-    schedulingInfo.timeSlice--; // Time slice decreased
-	if(schedulingInfo.timeSlice > 0){ // There's still time for this process
-		return current; 
-	} else { // There's no more time for current
-		ProcessID nextProcess = os_getNextReadyProcess(processes, current); // Choose the next one like EVEN
-		schedulingInfo.timeSlice = processes[nextProcess].priority; // Give the new process a time slice
-		return nextProcess;
+	if(os_Scheduler_Even(processes, current) == 0){
+		return 0;
+	} else {
+		timeSlice--;
+		if(processes[current].state == OS_PS_UNUSED || timeSlice == 0){
+			ProcessID next = os_Scheduler_Even(processes, current);
+			timeSlice = os_processes[next].priority;
+			return next;
+		} else {
+			return current;
+		}
 	}
 }
+#undef timeSlice
 
 /*!
  *  This function realizes the inactive-aging strategy. In this strategy a process specific integer ("the age") is used to determine
@@ -151,7 +154,7 @@ ProcessID os_Scheduler_RoundRobin(Process const processes[], ProcessID current) 
  *  \return The next process to be executed, determined based on the inactive-aging strategy.
  */
 ProcessID os_Scheduler_InactiveAging(Process const processes[], ProcessID current) {
-	if(os_getNextReadyProcess(processes, current) == 0){ // If no process other than idle is ready
+	if(os_Scheduler_Even(processes, current) == 0){
 		return 0;
 	} else {
 	    for(uint8_t i = 0; i < MAX_NUMBER_OF_PROCESSES; i++){
@@ -192,7 +195,10 @@ ProcessID os_Scheduler_InactiveAging(Process const processes[], ProcessID curren
  *  \return The next process to be executed, determined based on the run-to-completion strategy.
  */
 ProcessID os_Scheduler_RunToCompletion(Process const processes[], ProcessID current) {
+	if(os_Scheduler_Even(processes, current) == 0){
+		return 0;
+	}
     if (processes[current].state == OS_PS_READY){
 		return current; //If it's still ready let it run
-	} else return os_getNextReadyProcess(processes, current); //Else we get the next one like EVEN
+	} else return os_Scheduler_Even(processes, current); //Else we get the next one like EVEN
 }

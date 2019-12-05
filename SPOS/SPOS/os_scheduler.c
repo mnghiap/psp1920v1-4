@@ -87,9 +87,9 @@ ISR(TIMER2_COMPA_vect) {
 	}
     
     // 6. get next process depending on scheduling strategy
-	do {
+	//do {
 		executeScheduler(os_getSchedulingStrategy());
-	} while (os_processes[os_getCurrentProc()].state == OS_PS_UNUSED);
+	//} while (os_processes[os_getCurrentProc()].state == OS_PS_UNUSED);
 	
 	// Verify checksum to avoid stack inconsistence
 	StackChecksum currentChecksum = os_getStackChecksum(os_getCurrentProc());
