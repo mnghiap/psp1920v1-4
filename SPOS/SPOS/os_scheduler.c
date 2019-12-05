@@ -150,9 +150,9 @@ bool os_checkAutostartProgram(ProgramID programID) {
  */
 PROGRAM(0, AUTOSTART) {
     for (;;) {
-        lcd_clear();
+      //  lcd_clear();
         lcd_writeProgString(PSTR("."));
-        delayMs(DEFAULT_OUTPUT_DELAY);
+        delayMs(DEFAULT_OUTPUT_DELAY*2);
     }
 }
 
