@@ -175,13 +175,31 @@ void delayMs(uint16_t ms);
 #define LCD_CC_CLOCK_4a_BITMAP (CUSTOM_CHAR (\
 0b00000, \
 0b00110, \
+0b00111, \
+0b00111, \
+0b00111, \
+0b00110, \
+0b00000, 0))
+
+#define LCD_CC_CLOCK_4b_BITMAP (CUSTOM_CHAR (\
+0b00000, \
+0b01100, \
+0b10100, \
+0b00100, \
+0b10100, \
+0b01100, \
+0b00000, 0))
+
+#define LCD_CC_CLOCK_5a_BITMAP (CUSTOM_CHAR (\
+0b00000, \
+0b00110, \
 0b00101, \
 0b00100, \
 0b00101, \
 0b00110, \
 0b00000, 0))
 
-#define LCD_CC_CLOCK_4b_BITMAP (CUSTOM_CHAR (\
+#define LCD_CC_CLOCK_5b_BITMAP (CUSTOM_CHAR (\
 0b00000, \
 0b01100, \
 0b11100, \
@@ -190,7 +208,17 @@ void delayMs(uint16_t ms);
 0b01100, \
 0b00000, 0))
 
+#define max(a,b) \
+({ __typeof__ (a) _a = (a); \
+	__typeof__ (b) _b = (b); \
+_a > _b ? _a : _b; })
 
+#define min(a,b) \
+({ __typeof__ (a) _a = (a); \
+	__typeof__ (b) _b = (b); \
+_a < _b ? _a : _b; })
+
+#define range(x, low,high) max(min(x, high), low)
 
 
 #endif

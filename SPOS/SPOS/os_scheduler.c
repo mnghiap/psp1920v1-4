@@ -8,6 +8,7 @@
 #include "lcd.h"
 #include "os_memheap_drivers.h"
 #include "os_memory.h"
+#include "stdlib.h"
 
 #include <avr/interrupt.h>
 #include <stdbool.h>
@@ -144,41 +145,64 @@ bool os_checkAutostartProgram(ProgramID programID) {
     return !!(os_autostart & (1 << programID));
 }
 
+
 /*!
  *  This is the idle program. The idle process owns all the memory
  *  and processor time no other process wants to have.
  */
 PROGRAM(0, AUTOSTART) {
-	uint64_t CLOCK[5] = {
+	uint64_t CLOCK[7] = {
 		LCD_CC_CLOCK_1_BITMAP,
 		LCD_CC_CLOCK_2_BITMAP,
 		LCD_CC_CLOCK_3_BITMAP,
 		LCD_CC_CLOCK_4a_BITMAP,
-		LCD_CC_CLOCK_4b_BITMAP
+		LCD_CC_CLOCK_4b_BITMAP,
+		LCD_CC_CLOCK_5b_BITMAP,
+		LCD_CC_CLOCK_5a_BITMAP
 	};
 	
 //	for (int i = 0; i < 5; i++)
 //		lcd_registerCustomChar(i, CLOCK[i]);
 	
-	#define FACTOR 10
+	#define FACTOR 4
+	#define COLS 15
+	#define mod_x(x) ((x)%((COLS+1)*2))
+	#define column_x(x) range(mod_x(x)-1, 0, COLS)/COLS
+	#define row_x(x) range((-abs(2*(mod_x(x)-COLS)-1)+2*COLS+1)/2,0,COLS)
+	#define go_to(x) lcd_goto(column_x(x) + 1, row_x(x)+1)
+	#define go_and_write(x, c) go_to(x); lcd_writeChar(c);
+	
 	int i = 0;
-    for (;;i = (i+1)%(4*FACTOR)) {		
-//		lcd_clear();
+	for (int t=0;;t++) {
 		
-		if (i%FACTOR == 0) {
-			int ni = i/FACTOR;
-			lcd_registerCustomChar(0, CLOCK[ni]);
-			lcd_registerCustomChar(1, (ni == 3)?CLOCK[4]:0);
-		}
+		lcd_registerCustomChar(0, CLOCK[t % 4]);
+		for (int j=0; j<4; j++)
+			lcd_registerCustomChar(1+j, CLOCK[3+j]);
 		
 		lcd_clear();
-		lcd_writeChar(0);
-		lcd_writeChar(1);
-      //  lcd_clear();
-       // lcd_writeProgString(PSTR("."));
-        delayMs(100);
-    }
+		
+		if (t%4 == 3) {
+			go_and_write(i, 1+column_x(i)*2);
+			go_and_write(i+1, 2+column_x(i+1)*2);
+			i++;
+		//	go_and_write(i+COLS+1, 1+column_x(i+COLS+1)*2);
+		//	go_and_write(i+COLS+2, 2+column_x(i+COLS+2)*2);
+		} else {
+			go_and_write(i, 0);
+		//	go_and_write(i+COLS+1, 0);
+		}
+		
+		for (int j=0;j<FACTOR;j++)
+			delayMs(100);
+	}
+	
+	#undef COLS
 	#undef FACTOR
+	#undef mod_x
+	#undef column_x
+	#undef row_x
+	#undef go_to
+	#undef go_and_write
 }
 
 /*!
