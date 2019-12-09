@@ -16,6 +16,14 @@
 #define getLowNibble(HEAP, ADDR) (HEAP->driver->read(ADDR) & 0x0F);
 #define getHighNibble(HEAP, ADDR) ((HEAP->driver->read(ADDR) & 0xF0) >> 4);
 
+bool isValidUseAddressWithError(Heap const *heap, MemAddr addr, bool break_on_error);
+bool isValidMapAddressWithError(Heap const *heap, MemAddr addr, bool break_on_error);
+
+#define verifyUseAddressWithError(HEAP, ADDR) (isValidUseAddressWithError(HEAP, ADDR, true));
+#define verifyMapAddressWithError(HEAP, ADDR) (isValidMapAddressWithError(HEAP, ADDR, true));
+#define isValidUseAddress(HEAP, ADDR) (isValidUseAddressWithError(HEAP, ADDR, false));
+#define isValidMapAddress(HEAP, ADDR) (isValidMapAddressWithError(HEAP, ADDR, false));
+
 MemAddr os_malloc(Heap *heap, size_t size);
 
 void os_free(Heap *heap, MemAddr addr);
