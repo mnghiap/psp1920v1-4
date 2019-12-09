@@ -153,6 +153,7 @@ void os_freeOwnerRestricted(Heap *heap, MemAddr addr, ProcessID owner){
     os_enterCriticalSection();
     if (os_getOwnerOfChunk(heap, addr) != owner) {
         os_errorPStr(PSTR("free: proc. not own. of heap"));
+		os_leaveCriticalSection();
         return;
     }        
    
@@ -177,7 +178,7 @@ MemAddr os_malloc(Heap *heap, size_t size){
 	}
 	
 	if (addr <= 0) {
-		os_errorPStr(PSTR("malloc: No free space found"));
+		//os_errorPStr(PSTR("malloc: No free space found"));
 		os_leaveCriticalSection();
 		return 0;
 	}
