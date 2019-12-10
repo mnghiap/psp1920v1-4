@@ -69,6 +69,8 @@ void os_init(void) {
 		os_error("os_init: Heap offset too small");
 	}
 	
+	os_spi_init();
+	
     os_initScheduler();
 
     os_coarseSystemTime = 0;

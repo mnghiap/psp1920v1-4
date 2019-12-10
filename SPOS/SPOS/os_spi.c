@@ -1,0 +1,74 @@
+/*
+ * os_spi.c
+ *
+ * Created: 10.12.2019 14:58:38
+ *  Author: Minh Nghia Phan
+ */ 
+
+#include "os_spi.h"
+
+/* Some details before implementation:
+ * 
+ * SPCR = SPIE | SPE | DORD | MSTR | CPOL | CPHA | SPR1 | SPR0
+ * SPIE = 0 because we don't use interrupts
+ *  SPE = 1 to activate SPI mode
+ * DORD = 0 for MSB first. This should be more intuitive than LSB first.
+ * Like if we send or receive a byte, the slave gets/means exactly 
+ * that byte, not the reversed one like the diagram in Versuch 4 document.
+ * MSTR = 1, ofc we are the master
+ * CPOL = 0, active high idle low per the timing diagram 
+ * CPHA = 0, leading edge
+ * SPR1 = 0, for maximal clock speed
+ * SPR0 = 0, same as SPR1
+ *
+ * SPSR = SPIF | WCOL | - | - | - | - | - | SPI2X
+ *  SPIF = 1, we don't transmit anything by initialization
+ *  WCOL = Don't care
+ * SPI2X = 1 for maximal clock speed
+ */
+void os_spi_init(void){
+	SPCR = 0b01010000;
+	SPSR |= 0b10000001;
+}
+
+// This macro would set PORTB4 to output and set the bit B4.
+// Because B4 is connected to NOT CS of the external SRAM,
+// this is effectively chip deselect
+#define CHIP_DESELECT (DDRB |= 0b00010000; PORTB |= 0b00010000)
+
+// This macro selects the external SRAM by deleting PORTB4
+#define CHIP_SELECT (DDRB |= 0b00010000; PORTB &= 0b11101111) 
+
+// This macro deletes the SPIF bit, thus starts the transmission
+#define START_TRANSMISSION (SPSR &= 0b01111111) 
+
+// This macro actually gets the SPIF bit
+#define TRANSMISSION_COMPLETE ((SPSR & 0b10000000) >> 7)
+
+/* Both send and receive work like this:
+ * Put the byte you want to send in SPDR.
+ * Delete the SPIF bit to start the transmission.
+ * Busy wait for it to become 1 and see
+ * what we got in SPDR. It's what the slave sent us.
+ * What is meaningful is based on whether we want to
+ * send or receive data.
+ */
+uint8_t os_spi_send(uint8_t data){ 
+	os_enterCriticalSection();
+	CHIP_SELECT;
+	SPDR = data;
+	START_TRANSMISSION;
+	while(TRANSMISSION_COMPLETE == 0){
+		// Busy waiting
+	}
+	CHIP_DESELECT;
+	os_leaveCriticalSection();
+	return SPDR; // So we can reuse it for receive
+}
+
+/* This function would send a dummy byte 0xFF
+ * and only cares about the received byte in SPDR
+ */
+uint8_t os_spi_receive(){
+	return os_spi_send(0xFF);
+}

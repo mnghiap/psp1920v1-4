@@ -20,6 +20,7 @@
  * If the modification were to make this variable outside of the valid use range,
  * it would instead be reset to 0. 
  * For implementation see function setNextFitStart.
+ * I'm considering whether we should add another variable for the external heap.
  */
 static volatile MemAddr next_fit_start = 0;
 
@@ -53,6 +54,9 @@ MemAddr os_Memory_NextFit(Heap *heap, size_t size){
 	if(next_fit_start == 0){ // Next Fit has never been called or we left off at the last chunk
 		MemAddr addr = os_Memory_FirstFit(heap, size); // Next Fit degenerates to First Fit in this case
 		if(addr != 0){
+			/* setNextFitStart should only be called if there really is allocable memory
+			 * to avoid inconsistency.
+             */
 		    setNextFitStart(heap, addr, os_getChunkSizeUnrestricted(heap, addr, false));
 		}
 		os_leaveCriticalSection();
