@@ -20,6 +20,7 @@ bool isValidUseAddressWithError(Heap const *heap, MemAddr addr, bool break_on_er
 bool isValidMapAddressWithError(Heap const *heap, MemAddr addr, bool break_on_error);
 
 MemAddr os_malloc(Heap *heap, size_t size);
+MemAddr os_realloc(Heap* heap, MemAddr addr, uint16_t size);
 
 void os_free(Heap *heap, MemAddr addr);
 

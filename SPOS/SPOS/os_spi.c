@@ -49,9 +49,7 @@ uint8_t os_spi_send(uint8_t data){
 	os_enterCriticalSection();
 	SPDR = data;
 	START_TRANSMISSION;
-	while(TRANSMISSION_COMPLETE == 0){
-		// Busy waiting
-	}
+	while(TRANSMISSION_COMPLETE == 0);  // Busy waiting
 	os_leaveCriticalSection();
 	return SPDR; // So we can reuse it for receive
 }

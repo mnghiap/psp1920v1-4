@@ -166,6 +166,23 @@ void os_freeOwnerRestricted(Heap *heap, MemAddr addr, ProcessID owner){
     os_leaveCriticalSection();
 }
 
+void os_memcpy(Heap *heap_from, MemAddr from, Heap *heap_to, MemAddr to, uint16_t n) {
+    ProcessID owner = os_getCurrentProc();
+    if (os_getOwnerOfChunk(heap_from, from) != owner 
+            || os_getOwnerOfChunk(heap_to, to) != owner) {
+        os_errorPStr(PSTR("memcpy: proc. not own."));
+        return;
+    }
+
+    os_enterCriticalSection();
+    for (uint16_t i = 0; i < n; i++) {
+        heap_to->driver->write(
+            heap_from->driver->read(from)
+        );
+    }
+    os_leaveCriticalSection();
+}
+
 MemAddr os_malloc(Heap *heap, size_t size){
 	os_enterCriticalSection();
 	MemAddr addr = 0;
@@ -192,6 +209,66 @@ MemAddr os_malloc(Heap *heap, size_t size){
 	os_setMapEntry(heap, addr, os_getCurrentProc());
 	os_leaveCriticalSection();
 	return addr;
+}
+
+MemAddr os_realloc(Heap* heap, MemAddr addr, uint16_t size) {
+    uint16_t cur_size = os_getChunkSize(heap, addr);
+    if (cur_size == size || addr <= 0)
+        return 0;
+
+    ProcessID owner = os_getCurrentProc();
+    if (owner != os_getOwnerOfChunk(heap, addr)) {
+        os_errorPStr("realloc: proc. not own.");
+        return 0;
+    }
+
+    os_enterCriticalSection();
+    MemAddr first_addr = os_getFirstByteOfChunk(heap, addr);
+    if (size < cur_size) {  // shrinking
+        uint16_t missing = cur_size - size;
+        MemAddr last = first_addr + size;
+        for (uint16_t i =0; i<missing; i++)
+            os_setMapEntry(heap, last + i, 0x0);
+    } else {  // enlarging
+        uint16_t missing = size - cur_size;
+        MemAddr start_a = first_addr;
+        MemAddr end_a = first_addr + size; 
+        uint16_t to_left, to_right = to_left = 0;
+        bool move = false;
+
+        {
+            uint16_t l_size = os_getChunkSizeUnrestricted(heap, first_addr - 1, false);
+            uint16_t r_size = os_getChunkSizeUnrestricted(heap, first_addr + cur_size, false);
+            if (r_size >= missing)  // enough room to right
+                to_right = missing;
+            else if (l_size >= missing)  // enough room to left
+                to_left = missing;
+            else if (l_size + r_size >= missing) {  // enough room to left+right
+                to_left = l_size;
+                to_right = missing - l_size;
+            } else  // need to move
+                move = true;
+        }
+
+        if (!move) {
+            // expand left
+            for (uint16_t i = 0; i < to_left; i++)
+                os_setMapEntry(heap, start_a - i, 0xF);
+            os_setMapEntry(heap, start_a-to_left, owner);
+            first_addr = start_a-to_left;
+
+            // expand right
+            for (uint16_t i = 0; i < to_right; i++)
+                os_setMapEntry(heap, end_a + i, 0xF);
+        } else {
+            MemAddr addr = os_malloc(heap, size);
+            os_memcpy(heap, first_addr, heap, addr, cur_size);
+            first_addr = addr;
+        }
+    }
+    
+    os_leaveCriticalSection();
+    return first_addr;
 }
 
 void os_free(Heap *heap, MemAddr addr){
