@@ -31,14 +31,6 @@ void os_spi_init(void){
 	SPSR |= 0b10000001;
 }
 
-// This macro would set PORTB4 to output and set the bit B4.
-// Because B4 is connected to NOT CS of the external SRAM,
-// this is effectively chip deselect
-#define CHIP_DESELECT (DDRB |= 0b00010000; PORTB |= 0b00010000)
-
-// This macro selects the external SRAM by deleting PORTB4
-#define CHIP_SELECT (DDRB |= 0b00010000; PORTB &= 0b11101111) 
-
 // This macro deletes the SPIF bit, thus starts the transmission
 #define START_TRANSMISSION (SPSR &= 0b01111111) 
 
@@ -55,13 +47,11 @@ void os_spi_init(void){
  */
 uint8_t os_spi_send(uint8_t data){ 
 	os_enterCriticalSection();
-	CHIP_SELECT;
 	SPDR = data;
 	START_TRANSMISSION;
 	while(TRANSMISSION_COMPLETE == 0){
 		// Busy waiting
 	}
-	CHIP_DESELECT;
 	os_leaveCriticalSection();
 	return SPDR; // So we can reuse it for receive
 }

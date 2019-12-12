@@ -19,6 +19,8 @@ typedef enum{
 	OS_MEM_WORST
 } AllocStrategy;
 
+#define DEFAULT_ALLOCATION_STRATEGY OS_MEM_FIRST
+
 typedef struct Heap {
 	MemDriver* driver;
 	AllocStrategy alloc_strat;
@@ -39,6 +41,10 @@ Heap intHeap__;
 
 #ifndef intHeap
 #define intHeap (&intHeap__)
+#endif
+
+#ifndef extHeap
+#define extHeap (&extHeap__)
 #endif
 
 #endif /* OS_MEMHEAP_DRIVERS_H_ */

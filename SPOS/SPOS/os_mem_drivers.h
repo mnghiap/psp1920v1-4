@@ -19,6 +19,10 @@ typedef uint8_t MemValue;
 #define intSRAM (&intSRAM__)
 #endif
 
+#ifndef extSRAM
+#define extSRAM (&extSRAM__)
+#endif
+
 typedef struct MemDriver{
 	MemAddr const start;
 	uint16_t const size;
@@ -28,5 +32,6 @@ typedef struct MemDriver{
 } MemDriver;
 
 MemDriver intSRAM__;
+MemDriver extSRAM__;
 
 #endif /* OS_MEM_DRIVERS_H_ */

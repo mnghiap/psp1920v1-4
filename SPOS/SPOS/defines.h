@@ -91,4 +91,14 @@
 #define PROCESS_STACK_BOTTOM(PID)   (BOTTOM_OF_PROCS_STACK - ((PID) * STACK_SIZE_PROC))
 
 #define HEAPOFFSET                  400
+
+//----------------------------------------------------------------------------
+// HEAP constants 
+//----------------------------------------------------------------------------
+
+#define EXT_SRAM_START              0
+
+//! 16bit sram size 
+#define EXT_MEMORY_SRAM             ((1ul << 16) - 1)
+
 #endif

@@ -12,20 +12,31 @@
 #include "defines.h"
 
 const PROGMEM char intStr[] = "internal";
+const PROGMEM char extStr[] = "external";
 
-Heap* heap_list[] = {intHeap}; // We put the heaps in an array for the functions in this file
+Heap* heap_list[] = {intHeap, extHeap}; // We put the heaps in an array for the functions in this file
 
 #define HEAP_MEMORY (AVR_MEMORY_SRAM / 2 - HEAPOFFSET)
 #define HEAP_START (AVR_SRAM_START + HEAPOFFSET)
 
 Heap intHeap__ = {
 	.driver = intSRAM,
-	.alloc_strat = OS_MEM_FIRST, // default strategy
+	.alloc_strat = DEFAULT_ALLOCATION_STRATEGY, // default strategy
 	.map_start = HEAP_START,
 	.map_size = HEAP_MEMORY/ 3,
 	.use_start = HEAP_START + HEAP_MEMORY / 3, // practically .map_start + .map_size
 	.use_size = HEAP_MEMORY - HEAP_MEMORY / 3,
 	.name = intStr, // as per the Doxygen documentation
+};
+
+Heap extHeap__ = {
+	.driver = extSRAM,
+	.alloc_strat = DEFAULT_ALLOCATION_STRATEGY, // default strategy
+	.map_start = extSRAM.start,
+	.map_size = extSRAM.size/ 3,
+	.use_start = extSRAM.start + extSRAM.size / 3, // practically .map_start + .map_size
+	.use_size = 2 * (extSRAM.size / 3),
+	.name = extStr, // as per the Doxygen documentation
 };
 
 void os_initHeaps(void){
