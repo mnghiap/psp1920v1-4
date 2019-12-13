@@ -9,6 +9,7 @@
 #include "defines.h"
 #include "atmega644constants.h"
 #include "os_spi.h"
+#include "os_scheduler.h"
 
 void initSRAM_internal(void){
     // There is nothing to do here.

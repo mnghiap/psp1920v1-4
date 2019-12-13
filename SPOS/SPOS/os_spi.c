@@ -27,6 +27,10 @@
  * SPI2X = 1 for maximal clock speed
  */
 void os_spi_init(void){
+	// Configure DDRB for CK, SI, SO, NOT CS
+	DDRB   = 0b10110000; // SO is input, all else are output
+	PORTB |= 0b01000000; // Pull-up for SO
+	
 	SPCR = 0b01010000;
 	SPSR |= 0b10000001;
 }
@@ -54,9 +58,9 @@ uint8_t os_spi_send(uint8_t data){
 	return SPDR; // So we can reuse it for receive
 }
 
-/* This function would send a dummy byte 0xFF
+/* This function would send a dummy byte 0x00
  * and only cares about the received byte in SPDR
  */
 uint8_t os_spi_receive(){
-	return os_spi_send(0xFF);
+	return os_spi_send(0x00);
 }
