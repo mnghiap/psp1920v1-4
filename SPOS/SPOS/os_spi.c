@@ -6,6 +6,7 @@
  */ 
 
 #include "os_spi.h"
+#include "os_scheduler.h"
 
 /* Some details before implementation:
  * 
@@ -51,9 +52,11 @@ void os_spi_init(void){
  */
 uint8_t os_spi_send(uint8_t data){ 
 	os_enterCriticalSection();
+	CHIP_SRAM_SELECT;
 	SPDR = data;
 	START_TRANSMISSION;
 	while(TRANSMISSION_COMPLETE == 0);  // Busy waiting
+	CHIP_SRAM_DESELECT;
 	os_leaveCriticalSection();
 	return SPDR; // So we can reuse it for receive
 }

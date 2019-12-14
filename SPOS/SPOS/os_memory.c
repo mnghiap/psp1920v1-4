@@ -177,6 +177,7 @@ void os_memcpy(Heap *heap_from, MemAddr from, Heap *heap_to, MemAddr to, uint16_
     os_enterCriticalSection();
     for (uint16_t i = 0; i < n; i++) {
         heap_to->driver->write(
+		    to + i, 
             heap_from->driver->read(from)
         );
     }

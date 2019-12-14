@@ -38,6 +38,7 @@ Heap* os_lookupHeap(uint8_t index);
 size_t os_getHeapListLength(void);
 
 Heap intHeap__;
+Heap extHeap__;
 
 #ifndef intHeap
 #define intHeap (&intHeap__)

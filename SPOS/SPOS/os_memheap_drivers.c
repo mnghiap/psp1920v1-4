@@ -32,10 +32,10 @@ Heap intHeap__ = {
 Heap extHeap__ = {
 	.driver = extSRAM,
 	.alloc_strat = DEFAULT_ALLOCATION_STRATEGY, // default strategy
-	.map_start = extSRAM.start,
-	.map_size = extSRAM.size/ 3,
-	.use_start = extSRAM.start + extSRAM.size / 3, // practically .map_start + .map_size
-	.use_size = 2 * (extSRAM.size / 3),
+	.map_start = EXT_SRAM_START,
+	.map_size = EXT_MEMORY_SRAM/ 3,
+	.use_start = EXT_SRAM_START + EXT_MEMORY_SRAM / 3, // practically .map_start + .map_size
+	.use_size = 2 * (EXT_MEMORY_SRAM / 3),
 	.name = extStr, // as per the Doxygen documentation
 };
 
