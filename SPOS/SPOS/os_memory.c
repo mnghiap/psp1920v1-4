@@ -10,6 +10,7 @@
 #include "util.h"
 #include "os_core.h"
 #include <stdbool.h>
+#include <stdlib.h>
 
 #define isValidNibble(VALUE) (VALUE >= 0x0 && VALUE <= 0xF)
 
@@ -159,10 +160,43 @@ void os_freeOwnerRestricted(Heap *heap, MemAddr addr, ProcessID owner){
    
     // settings them here, 'cause otherwise os_... would be executed every iteration  
     MemAddr first_byte = os_getFirstByteOfChunk(heap, addr);
-    MemAddr end_byte = os_getChunkSize(heap, addr) + first_byte;
-    for (MemAddr cur_byte = first_byte; cur_byte < end_byte; cur_byte++) {
+    MemAddr end_byte = os_getChunkSize(heap, addr) + first_byte - 1;
+    for (MemAddr cur_byte = first_byte; cur_byte <= end_byte; cur_byte++) {
         os_setMapEntry(heap, cur_byte, 0);
     }
+	
+	/* We'll make use of the fact that
+	 * allocFrameStart[owner] <= first_byte and 
+	 * allocFrameEnd[owner] >= end_byte. Furthermore
+	 * the frame start and frame end have valid USE values.
+	 */
+	if(heap->allocFrameStart[owner] == first_byte && heap->allocFrameEnd[owner] == end_byte){
+		heap->allocFrameStart[owner] = 0;
+		heap->allocFrameEnd[owner] = 0;
+	}
+	if(heap->allocFrameStart[owner] < first_byte && heap->allocFrameEnd[owner] == end_byte){
+		// Iterate from the end till we find the frame end. 
+		// We know that it should be at most first_byte-1
+		for(MemAddr frame_end = first_byte - 1; frame_end >= heap->allocFrameStart[owner]; ){
+			if(os_getOwnerOfChunk(heap, frame_end) == owner){
+				heap->allocFrameEnd[owner] = frame_end;
+				break;
+			}
+			frame_end -= os_getChunkSizeUnrestricted(heap, frame_end, false);
+		}
+	}
+	if(heap->allocFrameStart[owner] == first_byte && heap->allocFrameEnd[owner] > end_byte){
+		// Iterate from the start till we find the frame start.
+		// We know that it should be at least end_byte + 1
+		for(MemAddr frame_start = end_byte + 1; frame_start <= heap->allocFrameEnd[owner]; ){
+			if(os_getOwnerOfChunk(heap, frame_start) == owner){
+				heap->allocFrameStart[owner] = frame_start;
+				break;
+			}
+			frame_start += os_getChunkSizeUnrestricted(heap, frame_start, false);
+		}
+	}
+	// We don't need to handle the last case as nothing changes
     os_leaveCriticalSection();
 }
 
@@ -208,6 +242,17 @@ MemAddr os_malloc(Heap *heap, size_t size){
 	}
 	// define owner
 	os_setMapEntry(heap, addr, os_getCurrentProc());
+	MemAddr last_addr = addr + size - 1;
+	
+	// Handling alloc. frame of the process
+	ProcessID pid = os_getCurrentProc();
+	if(heap->allocFrameStart[pid] == 0 && heap->allocFrameEnd[pid] == 0){ // No allocated memory yet
+		heap->allocFrameStart[pid] = addr;
+		heap->allocFrameEnd[pid] = last_addr;
+	} else { // There's already memory allocated to the process
+		heap->allocFrameStart[pid] = min(heap->allocFrameStart[pid], addr);
+		heap->allocFrameEnd[pid] = max(heap->allocFrameEnd[pid], last_addr);
+	}
 	os_leaveCriticalSection();
 	return addr;
 }
@@ -267,6 +312,24 @@ MemAddr os_realloc(Heap* heap, MemAddr addr, uint16_t size) {
             first_addr = addr;
         }
     }
+	/* There are just too many (edge) cases here to consider.
+	 * Iterating from both ends of the heap works, although it's
+	 * not the most efficient solution. */
+	for(MemAddr frame_start = heap->use_start; frame_start <= first_addr; ){
+		if(os_getOwnerOfChunk(heap, frame_start) == owner){ 
+			heap->allocFrameStart[owner] = frame_start;
+			break;
+		}
+		frame_start += os_getChunkSizeUnrestricted(heap, frame_start, false);
+	}
+	
+	for(MemAddr frame_end = heap->use_start + heap->use_size - 1; frame_end >= first_addr; ){
+		if(os_getOwnerOfChunk(heap, frame_end) == owner){ 
+			heap->allocFrameEnd[owner] = frame_end;
+			break;
+		}
+		frame_end -= os_getChunkSizeUnrestricted(heap, frame_end, false);
+	}
     
     os_leaveCriticalSection();
     return first_addr;
@@ -274,14 +337,17 @@ MemAddr os_realloc(Heap* heap, MemAddr addr, uint16_t size) {
 
 void os_free(Heap *heap, MemAddr addr){
     os_freeOwnerRestricted(heap, addr, os_getCurrentProc());
+	// os_freeOwnerRestricted modifies the alloc. frames by itself
 }
 
 void os_freeProcessMemory(Heap *heap, ProcessID pid){
     os_enterCriticalSection();
-	for (MemAddr addr = os_getUseStart(heap); addr < os_getUseStart(heap) + os_getUseSize(heap);) {
+	for (MemAddr addr = heap->allocFrameStart[pid]; addr <= heap->allocFrameEnd[pid];) {
 		if (os_getMapEntry(heap, addr) == pid)
 			os_freeOwnerRestricted(heap, addr, pid);
 		addr = os_getChunkSizeUnrestricted(heap, addr, false) + os_getFirstByteOfChunk(heap, addr);
 	}
+	heap->allocFrameStart[pid] = 0;
+	heap->allocFrameEnd[pid] = 0;
     os_leaveCriticalSection();
 }

@@ -11,6 +11,7 @@
 
 #include "os_mem_drivers.h"
 #include <stddef.h>
+#include "defines.h"
 
 typedef enum{
 	OS_MEM_FIRST,
@@ -21,6 +22,15 @@ typedef enum{
 
 #define DEFAULT_ALLOCATION_STRATEGY OS_MEM_FIRST
 
+/* About the allocFrameStart and allocFrameEnd arrays:
+ * If both are equal 0, this implies that there is no
+ * memory allocated to the process. We will make use of 
+ * this implication in later interactions with heaps.
+ * Convention: allocFrameEnd[pid] is the last valid byte
+ * of Process pid in the heap. Functions that make direct 
+ * use of these arrays are malloc, freeOwnerRestricted,
+ * freeProcessMemory and realloc.
+ */
 typedef struct Heap {
 	MemDriver* driver;
 	AllocStrategy alloc_strat;
@@ -29,6 +39,8 @@ typedef struct Heap {
 	const MemAddr use_start;
 	const size_t use_size;
 	const char* name;
+	MemAddr allocFrameStart[MAX_NUMBER_OF_PROCESSES];
+	MemAddr allocFrameEnd[MAX_NUMBER_OF_PROCESSES];
 } Heap;
 
 void os_initHeaps(void);

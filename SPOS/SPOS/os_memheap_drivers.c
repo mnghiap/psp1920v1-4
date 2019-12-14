@@ -40,8 +40,9 @@ Heap extHeap__ = {
 };
 
 void os_initHeaps(void){
-	for(uint8_t i = 0; i < os_getHeapListLength() - 1; i++){
+	for(uint8_t i = 0; i < os_getHeapListLength(); i++){
 		Heap current_heap = *heap_list[i];
+		current_heap.driver->init();
 		for(MemAddr addr = current_heap.map_start; 
 		    addr < current_heap.map_start + current_heap.map_size;
 			addr++){
