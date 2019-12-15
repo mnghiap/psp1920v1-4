@@ -9,6 +9,7 @@
 #include "os_memory_strategies.h"
 #include "util.h"
 #include "os_core.h"
+#include "lcd.h"
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -75,7 +76,11 @@ MemValue os_getMapEntry(Heap const *heap, MemAddr addr){
 		return 0;
 	
 	MemAddr map_entry_byte = os_getMapStart(heap) + (addr - os_getUseStart(heap)) / 2;
-	if(addr % 2 == 0) {
+	if(addr % 2 == (os_getUseStart(heap)) % 2) {
+	/* We passed Versuch 3 just because getUseStart of 
+	 * the internal heap happens to be an even number. 
+	 * This is unfortunately not the case for the external heap.
+	 * This fix also applies for setMapEntry. */
 		return getHighNibble(heap, map_entry_byte);
 	} else 
 		return getLowNibble(heap, map_entry_byte);
@@ -87,7 +92,7 @@ void os_setMapEntry(Heap const *heap, MemAddr addr, MemValue value){
 	 
 	os_enterCriticalSection();
 	MemAddr map_entry_byte = os_getMapStart(heap) + (addr - os_getUseStart(heap)) / 2;
-	if(addr % 2 == 0)
+	if(addr % 2 == (os_getUseStart(heap)) % 2) 
 	    setHighNibble(heap, map_entry_byte, value);
 	else
 	    setLowNibble(heap, map_entry_byte, value);
@@ -160,7 +165,7 @@ void os_freeOwnerRestricted(Heap *heap, MemAddr addr, ProcessID owner){
    
     // settings them here, 'cause otherwise os_... would be executed every iteration  
     MemAddr first_byte = os_getFirstByteOfChunk(heap, addr);
-    MemAddr end_byte = os_getChunkSize(heap, addr) + first_byte - 1;
+    MemAddr end_byte = os_getChunkSizeUnrestricted(heap, addr, false) + first_byte - 1;
     for (MemAddr cur_byte = first_byte; cur_byte <= end_byte; cur_byte++) {
         os_setMapEntry(heap, cur_byte, 0);
     }
@@ -176,24 +181,20 @@ void os_freeOwnerRestricted(Heap *heap, MemAddr addr, ProcessID owner){
 	}
 	if(heap->allocFrameStart[owner] < first_byte && heap->allocFrameEnd[owner] == end_byte){
 		// Iterate from the end till we find the frame end. 
-		// We know that it should be at most first_byte-1
-		for(MemAddr frame_end = first_byte - 1; frame_end >= heap->allocFrameStart[owner]; ){
+		for(MemAddr frame_end = first_byte - 1; frame_end >= heap->allocFrameStart[owner]; frame_end--){
 			if(os_getOwnerOfChunk(heap, frame_end) == owner){
 				heap->allocFrameEnd[owner] = frame_end;
 				break;
 			}
-			frame_end -= os_getChunkSizeUnrestricted(heap, frame_end, false);
 		}
 	}
 	if(heap->allocFrameStart[owner] == first_byte && heap->allocFrameEnd[owner] > end_byte){
 		// Iterate from the start till we find the frame start.
-		// We know that it should be at least end_byte + 1
-		for(MemAddr frame_start = end_byte + 1; frame_start <= heap->allocFrameEnd[owner]; ){
+		for(MemAddr frame_start = end_byte + 1; frame_start <= heap->allocFrameEnd[owner]; frame_start++){
 			if(os_getOwnerOfChunk(heap, frame_start) == owner){
 				heap->allocFrameStart[owner] = frame_start;
 				break;
 			}
-			frame_start += os_getChunkSizeUnrestricted(heap, frame_start, false);
 		}
 	}
 	// We don't need to handle the last case as nothing changes
@@ -236,8 +237,9 @@ MemAddr os_malloc(Heap *heap, size_t size){
 	}
 	
 	for (MemAddr iter = addr; iter < addr + size; iter++) {
-		if (os_getMapEntry(heap, iter) != 0)
+		if (os_getMapEntry(heap, iter) != 0){
 			os_error("Malloc: overwriten data");
+		}
 		os_setMapEntry(heap, iter, 0xF);
 	}
 	// define owner
@@ -341,13 +343,14 @@ void os_free(Heap *heap, MemAddr addr){
 }
 
 void os_freeProcessMemory(Heap *heap, ProcessID pid){
-    os_enterCriticalSection();
-	for (MemAddr addr = heap->allocFrameStart[pid]; addr <= heap->allocFrameEnd[pid];) {
-		if (os_getMapEntry(heap, addr) == pid)
-			os_freeOwnerRestricted(heap, addr, pid);
-		addr = os_getChunkSizeUnrestricted(heap, addr, false) + os_getFirstByteOfChunk(heap, addr);
+	os_enterCriticalSection();
+	if(heap->allocFrameStart[pid] != 0 && heap->allocFrameEnd[pid] != 0){	
+		for (MemAddr addr = heap->allocFrameStart[pid]; addr <= heap->allocFrameEnd[pid]; addr++) {
+			if (os_getMapEntry(heap, addr) == pid)
+				os_freeOwnerRestricted(heap, addr, pid);	
+		}	
 	}
-	heap->allocFrameStart[pid] = 0;
-	heap->allocFrameEnd[pid] = 0;
-    os_leaveCriticalSection();
+	// No need to manually handle allocFrameStart or -End here
+	// freeOwnerRestricted does that in every loop iteration
+	os_leaveCriticalSection();
 }

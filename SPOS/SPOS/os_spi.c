@@ -37,7 +37,7 @@ void os_spi_init(void){
 }
 
 // This macro deletes the SPIF bit, thus starts the transmission
-#define START_TRANSMISSION (SPSR &= 0b01111111) 
+#define START_TRANSMISSION (SPSR &= 0b01111111)
 
 // This macro actually gets the SPIF bit
 #define TRANSMISSION_COMPLETE ((SPSR & 0b10000000) >> 7)
@@ -49,14 +49,17 @@ void os_spi_init(void){
  * what we got in SPDR. It's what the slave sent us.
  * What is meaningful is based on whether we want to
  * send or receive data.
+ *
+ * Fix 1: send and receive shouldn't do the chip select
+ * and deselect by themselves, as during the whole read or
+ * write sequence the ext. SRAM should be selected. The init, 
+ * read and write functions of the ext. SRAM driver will do that.
  */
 uint8_t os_spi_send(uint8_t data){ 
 	os_enterCriticalSection();
-	CHIP_SRAM_SELECT;
 	SPDR = data;
 	START_TRANSMISSION;
 	while(TRANSMISSION_COMPLETE == 0);  // Busy waiting
-	CHIP_SRAM_DESELECT;
 	os_leaveCriticalSection();
 	return SPDR; // So we can reuse it for receive
 }

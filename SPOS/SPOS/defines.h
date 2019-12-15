@@ -90,7 +90,7 @@
 //! The bottom of the memory chunk with number PID.
 #define PROCESS_STACK_BOTTOM(PID)   (BOTTOM_OF_PROCS_STACK - ((PID) * STACK_SIZE_PROC))
 
-#define HEAPOFFSET                  400
+#define HEAPOFFSET                  500 // Must be a number = 2 (mod 3)
 
 //----------------------------------------------------------------------------
 // HEAP constants 
