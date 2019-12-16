@@ -39,6 +39,7 @@ typedef struct Heap {
 	const MemAddr use_start;
 	const size_t use_size;
 	const char* name;
+	MemAddr last_next_fit;
 	MemAddr allocFrameStart[MAX_NUMBER_OF_PROCESSES];
 	MemAddr allocFrameEnd[MAX_NUMBER_OF_PROCESSES];
 } Heap;

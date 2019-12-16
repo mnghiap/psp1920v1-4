@@ -52,7 +52,7 @@ void setLowNibble (Heap const *heap, MemAddr addr, MemValue value){
 		return;
 	 
 	os_enterCriticalSection();
-	MemValue new_value = heap->driver->read(addr);
+    MemValue new_value = heap->driver->read(addr);
 	new_value &= 0b11110000;
 	new_value += value;
 	heap->driver->write(addr, new_value);
@@ -64,7 +64,7 @@ void setHighNibble (Heap const *heap, MemAddr addr, MemValue value){
 		return;
 	 
 	os_enterCriticalSection();
-	MemValue new_value = heap->driver->read(addr);
+    MemValue new_value = heap->driver->read(addr);
 	new_value &= 0b00001111;
 	new_value += (value << 4);
 	heap->driver->write(addr, new_value);
@@ -120,13 +120,14 @@ MemAddr os_getFirstByteOfChunk(Heap const *heap, MemAddr addr){
 }
 
 uint16_t os_getChunkSize(Heap const *heap, MemAddr addr){
-	return os_getChunkSizeUnrestricted(heap, addr, true);
+    return os_getChunkSizeUnrestrictedWithZeroMaxSize(heap, addr, true, -1);
 }
 
-uint16_t os_getChunkSizeUnrestricted(Heap const *heap, MemAddr addr, bool is_restricted) {
+uint16_t os_getChunkSizeUnrestrictedWithZeroMaxSize(Heap const *heap, MemAddr addr, bool is_restricted, uint16_t max_size) {
 	if(!verifyUseAddressWithError(heap, addr))
 		return 0;
 	 
+    os_enterCriticalSection();
 	MemAddr first_chunk_addr = os_getFirstByteOfChunk(heap, addr); 
 	MemAddr iter_addr = first_chunk_addr;
 	uint16_t chunk_size = 0;
@@ -134,13 +135,14 @@ uint16_t os_getChunkSizeUnrestricted(Heap const *heap, MemAddr addr, bool is_res
 	
 	if (is_restricted && look_for == 0)
 		return 0;
-	
-	chunk_size++;
-	iter_addr++;
-	while (isValidUseAddress(heap, iter_addr) && os_getMapEntry(heap, iter_addr) == look_for){
+    if (look_for != 0)
+        max_size = -1;
+
+	do {
 	    chunk_size++;
 		iter_addr++;
-	}
+	} while (isValidUseAddress(heap, iter_addr) && chunk_size < max_size && os_getMapEntry(heap, iter_addr) == look_for);
+    os_leaveCriticalSection();
 	return chunk_size;
 }
 
@@ -165,7 +167,7 @@ void os_freeOwnerRestricted(Heap *heap, MemAddr addr, ProcessID owner, bool hand
    
     // settings them here, 'cause otherwise os_... would be executed every iteration  
     MemAddr first_byte = os_getFirstByteOfChunk(heap, addr);
-    MemAddr end_byte = os_getChunkSizeUnrestricted(heap, addr, false) + first_byte - 1;
+    MemAddr end_byte = os_getChunkSize(heap, addr) + first_byte - 1;
     for (MemAddr cur_byte = first_byte; cur_byte <= end_byte; cur_byte++) {
         os_setMapEntry(heap, cur_byte, 0);
     }
@@ -182,27 +184,25 @@ void os_freeOwnerRestricted(Heap *heap, MemAddr addr, ProcessID owner, bool hand
 		if(heap->allocFrameStart[owner] == first_byte && heap->allocFrameEnd[owner] == end_byte){
 			heap->allocFrameStart[owner] = 0;
 			heap->allocFrameEnd[owner] = 0;
-		}
-		if(heap->allocFrameStart[owner] < first_byte && heap->allocFrameEnd[owner] == end_byte){
+		} else if(heap->allocFrameStart[owner] < first_byte && heap->allocFrameEnd[owner] == end_byte){
 			// Iterate from the end till we find the frame end. 
-			for(MemAddr frame_end = os_getUseStart(heap) + os_getUseSize(heap) - 1; 
-				frame_end >= heap->allocFrameStart[owner]; ){
+			for(MemAddr frame_end = os_getUseStart(heap) + os_getUseSize(heap) - 1;
+			frame_end >= heap->allocFrameStart[owner]; ){
 				if(os_getOwnerOfChunk(heap, frame_end) == owner){
 					heap->allocFrameEnd[owner] = frame_end;
 					break;
 				}
-				frame_end -= os_getChunkSizeUnrestricted(heap, frame_end, false);
+				frame_end -= os_getChunkSizeUnrestrictedWithZeroMaxSize(heap, frame_end, false, -1);
 			}
-		}
-		if(heap->allocFrameStart[owner] == first_byte && heap->allocFrameEnd[owner] > end_byte){
+		} else if(heap->allocFrameStart[owner] == first_byte && heap->allocFrameEnd[owner] > end_byte){
 			// Iterate from the start till we find the frame start.
 			for(MemAddr frame_start = os_getUseStart(heap); 
-				frame_start <= heap->allocFrameEnd[owner]; ){
+					frame_start <= heap->allocFrameEnd[owner]; ){
 				if(os_getOwnerOfChunk(heap, frame_start) == owner){
 					heap->allocFrameStart[owner] = frame_start;
 					break;
 				}
-				frame_start += os_getChunkSizeUnrestricted(heap, frame_start, false);
+				frame_start += os_getChunkSizeUnrestrictedWithZeroMaxSize(heap, frame_start, false, -1);
 			}
 		}
 	}
@@ -246,9 +246,9 @@ MemAddr os_malloc(Heap *heap, size_t size){
 	}
 	
 	for (MemAddr iter = addr; iter < addr + size; iter++) {
-		if (os_getMapEntry(heap, iter) != 0){
-			os_error("Malloc: overwriten data");
-		}
+	//	if (os_getMapEntry(heap, iter) != 0){
+	//		os_error("Malloc: overwriten data");
+	//	}
 		os_setMapEntry(heap, iter, 0xF);
 	}
 	// define owner
@@ -294,8 +294,8 @@ MemAddr os_realloc(Heap* heap, MemAddr addr, uint16_t size) {
         bool move = false;
 
         {
-            uint16_t l_size = os_getChunkSizeUnrestricted(heap, first_addr - 1, false);
-            uint16_t r_size = os_getChunkSizeUnrestricted(heap, first_addr + cur_size, false);
+            uint16_t l_size = os_getChunkSizeUnrestrictedWithZeroMaxSize(heap, first_addr - 1, false, missing);
+            uint16_t r_size = os_getChunkSizeUnrestrictedWithZeroMaxSize(heap, first_addr + cur_size, false, missing);
             if (r_size >= missing)  // enough room to right
                 to_right = missing;
             else if (l_size >= missing)  // enough room to left

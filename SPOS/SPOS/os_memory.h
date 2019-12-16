@@ -31,8 +31,7 @@ void os_freeProcessMemory(Heap *heap, ProcessID pid);
 
 MemAddr os_getFirstByteOfChunk(Heap const *heap, MemAddr addr);
 uint16_t os_getChunkSize(Heap const *heap, MemAddr addr);
-uint16_t os_getChunkSizeUnrestricted(Heap const *heap, MemAddr addr, bool do_restricted);
-
+uint16_t os_getChunkSizeUnrestrictedWithZeroMaxSize(Heap const *heap, MemAddr addr, bool is_restricted, uint16_t max_size);
 
 ProcessID os_getOwnerOfChunk(Heap const *heap, MemAddr addr);
 
@@ -40,8 +39,6 @@ inline size_t os_getMapSize(Heap const* heap) { return heap->map_size; }
 inline size_t os_getUseSize(Heap const* heap) { return heap->use_size; }
 inline MemAddr os_getMapStart(Heap const* heap) { return heap->map_start; }
 inline MemAddr os_getUseStart(Heap const* heap) { return heap->use_start; }
-
-MemAddr os_getFirstByteOfChunk(Heap const *heap, MemAddr addr);
 
 void os_setAllocationStrategy(Heap *heap, AllocStrategy allocStrat);
 
