@@ -31,7 +31,7 @@ void os_freeProcessMemory(Heap *heap, ProcessID pid);
 
 MemAddr os_getFirstByteOfChunk(Heap const *heap, MemAddr addr);
 uint16_t os_getChunkSize(Heap const *heap, MemAddr addr);
-uint16_t os_getChunkSizeUnrestrictedWithMaxSize(Heap const *heap, MemAddr addr, bool is_restricted, uint16_t max_size);
+uint16_t os_getChunkSizeUnrestrictedWithZeroMaxSize(Heap const *heap, MemAddr addr, bool is_restricted, uint16_t max_size);
 
 ProcessID os_getOwnerOfChunk(Heap const *heap, MemAddr addr);
 

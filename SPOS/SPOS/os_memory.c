@@ -120,10 +120,10 @@ MemAddr os_getFirstByteOfChunk(Heap const *heap, MemAddr addr){
 }
 
 uint16_t os_getChunkSize(Heap const *heap, MemAddr addr){
-    return os_getChunkSizeUnrestrictedWithMaxSize(heap, addr, true, -1);
+    return os_getChunkSizeUnrestrictedWithZeroMaxSize(heap, addr, true, -1);
 }
 
-uint16_t os_getChunkSizeUnrestrictedWithMaxSize(Heap const *heap, MemAddr addr, bool is_restricted, uint16_t max_size) {
+uint16_t os_getChunkSizeUnrestrictedWithZeroMaxSize(Heap const *heap, MemAddr addr, bool is_restricted, uint16_t max_size) {
 	if(!verifyUseAddressWithError(heap, addr))
 		return 0;
 	 
@@ -192,7 +192,7 @@ void os_freeOwnerRestricted(Heap *heap, MemAddr addr, ProcessID owner, bool hand
 					heap->allocFrameEnd[owner] = frame_end;
 					break;
 				}
-				frame_end -= os_getChunkSizeUnrestrictedWithMaxSize(heap, frame_end, false, -1);
+				frame_end -= os_getChunkSizeUnrestrictedWithZeroMaxSize(heap, frame_end, false, -1);
 			}
 		} else if(heap->allocFrameStart[owner] == first_byte && heap->allocFrameEnd[owner] > end_byte){
 			// Iterate from the start till we find the frame start.
@@ -202,7 +202,7 @@ void os_freeOwnerRestricted(Heap *heap, MemAddr addr, ProcessID owner, bool hand
 					heap->allocFrameStart[owner] = frame_start;
 					break;
 				}
-				frame_start += os_getChunkSizeUnrestrictedWithMaxSize(heap, frame_start, false, -1);
+				frame_start += os_getChunkSizeUnrestrictedWithZeroMaxSize(heap, frame_start, false, -1);
 			}
 		}
 	}
@@ -294,8 +294,8 @@ MemAddr os_realloc(Heap* heap, MemAddr addr, uint16_t size) {
         bool move = false;
 
         {
-            uint16_t l_size = os_getChunkSizeUnrestrictedWithMaxSize(heap, first_addr - 1, false, missing);
-            uint16_t r_size = os_getChunkSizeUnrestrictedWithMaxSize(heap, first_addr + cur_size, false, missing);
+            uint16_t l_size = os_getChunkSizeUnrestrictedWithZeroMaxSize(heap, first_addr - 1, false, missing);
+            uint16_t r_size = os_getChunkSizeUnrestrictedWithZeroMaxSize(heap, first_addr + cur_size, false, missing);
             if (r_size >= missing)  // enough room to right
                 to_right = missing;
             else if (l_size >= missing)  // enough room to left
