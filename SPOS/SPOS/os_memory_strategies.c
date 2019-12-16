@@ -66,6 +66,7 @@ MemAddr os_Memory_NextFit(Heap *heap, size_t size){
 		while(isValidUseAddress(heap, iter)){
 			uint16_t iter_chunk_size = os_getChunkSizeUnrestricted(heap, iter, false);
 			if(os_getOwnerOfChunk(heap, iter) == 0 && iter_chunk_size >= size){ // We can choose this
+				iter = os_getFirstByteOfChunk(heap, iter);
 				setNextFitStart(heap, iter, iter_chunk_size);
 				os_leaveCriticalSection();
 				return iter;
@@ -77,7 +78,7 @@ MemAddr os_Memory_NextFit(Heap *heap, size_t size){
 	// If the code ever reaches here, it means that there's no free space
 	// after the current next_fit_start can be found. The strategy degenerates
 	// to First Fit.
-	MemAddr addr = os_Memory_FirstFit(heap, size);
+	volatile MemAddr addr = os_Memory_FirstFit(heap, size);
 	uint16_t addr_chunk_size = os_getChunkSizeUnrestricted(heap, addr, false);
 	if(addr != 0){
 	    setNextFitStart(heap, addr, addr_chunk_size);

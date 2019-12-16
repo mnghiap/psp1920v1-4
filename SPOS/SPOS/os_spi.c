@@ -29,8 +29,8 @@
  */
 void os_spi_init(void){
 	// Configure DDRB for CK, SI, SO, NOT CS
-	DDRB   = 0b10110000; // SO is input, all else are output
-	PORTB |= 0b01000000; // Pull-up for SO
+	DDRB   = 0b10111000; // SO is input, all else are output
+	PORTB |= 0b00010000; // Pull-up for SO
 	
 	SPCR = 0b01010000;
 	SPSR |= 0b10000001;
@@ -60,8 +60,9 @@ uint8_t os_spi_send(uint8_t data){
 	SPDR = data;
 	START_TRANSMISSION;
 	while(TRANSMISSION_COMPLETE == 0);  // Busy waiting
+	data = SPDR;
 	os_leaveCriticalSection();
-	return SPDR; // So we can reuse it for receive
+	return data; // So we can reuse it for receive
 }
 
 /* This function would send a dummy byte 0x00
