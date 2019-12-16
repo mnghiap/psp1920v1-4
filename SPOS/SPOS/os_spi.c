@@ -28,19 +28,21 @@
  * SPI2X = 1 for maximal clock speed
  */
 void os_spi_init(void){
+	os_enterCriticalSection();
 	// Configure DDRB for CK, SI, SO, NOT CS
-	DDRB   = 0b10110000; // SO is input, all else are output
-	PORTB |= 0b01000000; // Pull-up for SO
+	DDRB   = 0b10111000; // SO is input, all else are output
+	PORTB |= 0b00010000; // Pull-up for SO
 	
 	SPCR = 0b01010000;
-	SPSR |= 0b10000001;
+	SPSR |= 0b00000001;
+	os_leaveCriticalSection();
 }
 
 // This macro deletes the SPIF bit, thus starts the transmission
 #define START_TRANSMISSION (SPSR &= 0b01111111)
 
 // This macro actually gets the SPIF bit
-#define TRANSMISSION_COMPLETE ((SPSR & 0b10000000) >> 7)
+#define TRANSMISSION_COMPLETE (SPSR >> 7)
 
 /* Both send and receive work like this:
  * Put the byte you want to send in SPDR.
@@ -59,14 +61,15 @@ uint8_t os_spi_send(uint8_t data){
 	os_enterCriticalSection();
 	SPDR = data;
 	START_TRANSMISSION;
-	while(TRANSMISSION_COMPLETE == 0);  // Busy waiting
+	while(!TRANSMISSION_COMPLETE);  // Busy waiting
+	data = SPDR;
 	os_leaveCriticalSection();
-	return SPDR; // So we can reuse it for receive
+	return data; // So we can reuse it for receive
 }
 
 /* This function would send a dummy byte 0x00
  * and only cares about the received byte in SPDR
  */
 uint8_t os_spi_receive(){
-	return os_spi_send(0x00);
+	return os_spi_send(0xFF);
 }

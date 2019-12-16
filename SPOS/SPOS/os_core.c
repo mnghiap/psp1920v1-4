@@ -4,6 +4,8 @@
 #include "lcd.h"
 #include "os_input.h"
 #include "os_memheap_drivers.h"
+#include "os_spi.h"
+#include "os_mem_drivers.h"
 
 #include <avr/interrupt.h>
 #include <avr/io.h>

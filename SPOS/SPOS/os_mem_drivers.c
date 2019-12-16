@@ -25,11 +25,16 @@ void writeSRAM_internal (MemAddr addr, MemValue value){
 	(*pointer) = value;
 }
 
-void spi_sendAddr(MemAddr addr) {
-    os_spi_send(0x00);  // …at address (as only 16bit, first 8 must be empty)
-    os_spi_send(addr >> 8);
-    os_spi_send(addr & 0xFF);
-}
+#define spi_sendAddr(ADDR) \
+	os_spi_send(0x00); \
+	os_spi_send(ADDR >> 8); \
+	os_spi_send(ADDR & 0xFF)
+
+//void spi_sendAddr(MemAddr addr) {
+//    os_spi_send(0x00);  // …at address (as only 16bit, first 8 must be empty)
+//    os_spi_send(addr >> 8);
+//    os_spi_send(addr & 0xFF);
+//}
 
 void initSRAM_external(void) {
     os_enterCriticalSection();
@@ -47,10 +52,12 @@ MemValue readSRAM_external(MemAddr addr){
     CHIP_SRAM_SELECT;
     os_spi_send(0x03);  // cmd: "read"…
     spi_sendAddr(addr);  // …at addr
-    MemValue ret = os_spi_receive();
+	addr = (uint16_t) os_spi_receive();
+  //  MemValue ret = os_spi_receive();
+
     CHIP_SRAM_DESELECT; 
     os_leaveCriticalSection();
-    return ret;
+    return addr & 0xFF;
 }
 
 void writeSRAM_external(MemAddr addr, MemValue value){

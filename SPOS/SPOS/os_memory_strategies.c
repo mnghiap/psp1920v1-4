@@ -24,19 +24,23 @@
  */
 static volatile MemAddr next_fit_start = 0;
 
-MemAddr os_Memory_FirstFit(Heap *heap, size_t size){
+MemAddr os_Memory_FirstFit(Heap *heap, size_t size) {
     os_enterCriticalSection();
     MemAddr start = os_getUseStart(heap);
     MemAddr end = os_getUseSize(heap) + os_getUseStart(heap);
-    
-    for (volatile MemAddr addr = start; addr < end; ) {
-		uint16_t chunk_size = os_getChunkSizeUnrestricted(heap, addr, false);
-        if (os_getOwnerOfChunk(heap, addr) == 0 && chunk_size >= size) {
-            MemAddr free_space = os_getFirstByteOfChunk(heap, addr); 
+    MemAddr current_candidate = 0;
+
+    for (volatile MemAddr addr = start; addr < end; addr++) {
+        if (os_getMapEntry(heap, addr) == 0) {
+            if (current_candidate == 0)
+                current_candidate = addr;
+        } else
+            current_candidate = 0;
+
+        if (addr - current_candidate + 1 >= size && current_candidate != 0) {
             os_leaveCriticalSection();
-            return free_space;
+            return current_candidate;
         }
-		addr += chunk_size;
     } 
     os_leaveCriticalSection();
     return 0;
@@ -57,31 +61,31 @@ MemAddr os_Memory_NextFit(Heap *heap, size_t size){
 			/* setNextFitStart should only be called if there really is allocable memory
 			 * to avoid inconsistency.
              */
-		    setNextFitStart(heap, addr, os_getChunkSizeUnrestricted(heap, addr, false));
+		//    setNextFitStart(heap, addr, os_getChunkSizeUnrestricted(heap, addr, false));
 		}
 		os_leaveCriticalSection();
 		return addr;
 	} else {
 		MemAddr iter = next_fit_start; // Pick up where it left off
 		while(isValidUseAddress(heap, iter)){
-			uint16_t iter_chunk_size = os_getChunkSizeUnrestricted(heap, iter, false);
+	/*		uint16_t iter_chunk_size = os_getChunkSizeUnrestricted(heap, iter, false);
 			if(os_getOwnerOfChunk(heap, iter) == 0 && iter_chunk_size >= size){ // We can choose this
 				setNextFitStart(heap, iter, iter_chunk_size);
 				os_leaveCriticalSection();
 				return iter;
 			} else {
 				iter += iter_chunk_size; // Try the next chunk
-			}
+			} */
 		}
 	}
 	// If the code ever reaches here, it means that there's no free space
 	// after the current next_fit_start can be found. The strategy degenerates
 	// to First Fit.
 	MemAddr addr = os_Memory_FirstFit(heap, size);
-	uint16_t addr_chunk_size = os_getChunkSizeUnrestricted(heap, addr, false);
+	/*uint16_t addr_chunk_size = os_getChunkSizeUnrestricted(heap, addr, false);
 	if(addr != 0){
 	    setNextFitStart(heap, addr, addr_chunk_size);
-	}
+	}*/
 	os_leaveCriticalSection();
 	return addr;
 }
@@ -94,12 +98,12 @@ MemAddr os_Memory_WorstFit(Heap *heap, size_t size){
 	// Iterate with iter from heap use start
 	// Store the temporary result in addr and its chunk size in addr_chunk_size
 	while(isValidUseAddress(heap, iter)){
-		uint16_t iter_chunk_size = os_getChunkSizeUnrestricted(heap, iter, false);
+	/*	uint16_t iter_chunk_size = os_getChunkSizeUnrestricted(heap, iter, false);
 		if(os_getOwnerOfChunk(heap, iter) == 0 && iter_chunk_size >= size && iter_chunk_size > addr_chunk_size){ // Looking for the biggest possible chunk
 			addr = iter;
 			addr_chunk_size = iter_chunk_size;
 		} 
-		iter += iter_chunk_size; // try the next chunk
+		iter += iter_chunk_size; // try the next chunk */
 	}
 	os_leaveCriticalSection();
 	return addr;
@@ -118,12 +122,12 @@ MemAddr os_Memory_BestFit(Heap *heap, size_t size){
 	// Iterate with iter from heap use start
 	// Store the temporary result in addr and its chunk size in addr_chunk_size
 	while(isValidUseAddress(heap, iter)){
-		uint16_t iter_chunk_size = os_getChunkSizeUnrestricted(heap, iter, false);
+	/*	uint16_t iter_chunk_size = os_getChunkSizeUnrestricted(heap, iter, false);
 		if(os_getOwnerOfChunk(heap, iter) == 0 && iter_chunk_size >= size && iter_chunk_size < addr_chunk_size){ // Looking for the smallest possible chunk
 			addr = iter;
 			addr_chunk_size = iter_chunk_size;
 		} 
-		iter += iter_chunk_size; // try the next chunk
+		iter += iter_chunk_size; // try the next chunk*/
 	}
 	os_leaveCriticalSection();
 	return addr;
