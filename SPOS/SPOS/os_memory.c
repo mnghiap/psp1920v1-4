@@ -184,27 +184,25 @@ void os_freeOwnerRestricted(Heap *heap, MemAddr addr, ProcessID owner, bool hand
 		if(heap->allocFrameStart[owner] == first_byte && heap->allocFrameEnd[owner] == end_byte){
 			heap->allocFrameStart[owner] = 0;
 			heap->allocFrameEnd[owner] = 0;
-		}
-		if(heap->allocFrameStart[owner] < first_byte && heap->allocFrameEnd[owner] == end_byte){
+		} else if(heap->allocFrameStart[owner] < first_byte && heap->allocFrameEnd[owner] == end_byte){
 			// Iterate from the end till we find the frame end. 
-			for(MemAddr frame_end = os_getUseStart(heap) + os_getUseSize(heap) - 1; 
-				frame_end >= heap->allocFrameStart[owner]; ){
+			for(MemAddr frame_end = os_getUseStart(heap) + os_getUseSize(heap) - 1;
+			frame_end >= heap->allocFrameStart[owner]; ){
 				if(os_getOwnerOfChunk(heap, frame_end) == owner){
 					heap->allocFrameEnd[owner] = frame_end;
 					break;
 				}
-				frame_end -= os_getChunkSize(heap, frame_end);
+				frame_end -= os_getChunkSizeUnrestrictedWithMaxSize(heap, frame_end, false, -1);
 			}
-		}
-		if(heap->allocFrameStart[owner] == first_byte && heap->allocFrameEnd[owner] > end_byte){
+		} else if(heap->allocFrameStart[owner] == first_byte && heap->allocFrameEnd[owner] > end_byte){
 			// Iterate from the start till we find the frame start.
 			for(MemAddr frame_start = os_getUseStart(heap); 
-				frame_start <= heap->allocFrameEnd[owner]; ){
+					frame_start <= heap->allocFrameEnd[owner]; ){
 				if(os_getOwnerOfChunk(heap, frame_start) == owner){
 					heap->allocFrameStart[owner] = frame_start;
 					break;
 				}
-				frame_start += os_getChunkSize(heap, frame_start);
+				frame_start += os_getChunkSizeUnrestrictedWithMaxSize(heap, frame_start, false, -1);
 			}
 		}
 	}
