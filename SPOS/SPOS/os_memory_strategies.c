@@ -22,20 +22,14 @@
  * For implementation see function setNextFitStart.
  * I'm considering whether we should add another variable for the external heap.
  */
-static volatile MemAddr next_fit_start = 0;
+//static volatile MemAddr next_fit_start = 0;
 
 MemAddr get_next_fit(Heap *heap, size_t size, MemAddr start) {
 	os_enterCriticalSection();
 	
-	MemAddr iter_start = start - os_getUseStart(heap);
-	MemAddr iter_end   = (os_getUseSize(heap) - 1 + iter_start) % os_getUseSize(heap); 
     MemAddr current_candidate = 0;
 
-	for (MemAddr iter = iter_start; iter != iter_end; iter = (iter+1) % os_getUseSize(heap)) {
-		MemAddr addr = iter + os_getUseStart(heap);
-		if (iter == 0)
-			current_candidate = 0;
-		
+	for (MemAddr addr = start; isValidUseAddress(heap, addr); addr++) {		
         if (os_getMapEntry(heap, addr) == 0) {
             if (current_candidate == 0)
                 current_candidate = addr;
@@ -64,14 +58,35 @@ MemAddr os_Memory_FirstFit(Heap *heap, size_t size) {
 
 MemAddr os_Memory_NextFit(Heap *heap, size_t size) {
 	os_enterCriticalSection();
-	if (heap->last_next_fit == 0)
-		heap->last_next_fit = os_getUseStart(heap);
-	
-	MemAddr addr = get_next_fit(heap, size, heap->last_next_fit);
-	setNextFitStart(heap, addr, size);
+	if(heap->last_next_fit == 0){ // Next Fit has never been called or we left off at the last chunk
+		MemAddr addr = os_Memory_FirstFit(heap, size); // Next Fit degenerates to First Fit in this case
+		if(addr != 0){
+			/* setNextFitStart should only be called if there really is allocable memory
+			 * to avoid inconsistency.
+             */
+		    setNextFitStart(heap, addr, size);
+		}
+		os_leaveCriticalSection();
+		return addr;
+	} else {
+		volatile MemAddr addr = get_next_fit(heap, size, heap->last_next_fit);
+		if (addr > 0) {
+			setNextFitStart(heap, addr, size);
+			os_leaveCriticalSection();
+			return addr;
+		}
+	}
+	// If the code ever reaches here, it means that there's no free space
+	// after the current next_fit_start can be found. The strategy degenerates
+	// to First Fit.
+	MemAddr addr = os_Memory_FirstFit(heap, size);
+	if(addr != 0) {
+	    setNextFitStart(heap, addr, size);
+	}
 	os_leaveCriticalSection();
 	return addr;
 }
+
 
 MemAddr os_Memory_WorstFit(Heap *heap, size_t size){
 	os_enterCriticalSection();
