@@ -26,6 +26,7 @@ Heap intHeap__ = {
 	.map_size = HEAP_MEMORY/ 3,
 	.use_start = HEAP_START + HEAP_MEMORY / 3, // practically .map_start + .map_size
 	.use_size = HEAP_MEMORY - HEAP_MEMORY / 3,
+	.last_next_fit = 0,
 	.name = intStr, // as per the Doxygen documentation
 };
 
@@ -36,6 +37,7 @@ Heap extHeap__ = {
 	.map_size = EXT_MEMORY_SRAM/ 3,
 	.use_start = EXT_SRAM_START + EXT_MEMORY_SRAM / 3, // practically .map_start + .map_size
 	.use_size = 2 * (EXT_MEMORY_SRAM / 3),
+	.last_next_fit = 0,
 	.name = extStr, // as per the Doxygen documentation
 };
 

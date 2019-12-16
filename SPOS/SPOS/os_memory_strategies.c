@@ -24,13 +24,18 @@
  */
 static volatile MemAddr next_fit_start = 0;
 
-MemAddr os_Memory_FirstFit(Heap *heap, size_t size) {
-    os_enterCriticalSection();
-    MemAddr start = os_getUseStart(heap);
-    MemAddr end = os_getUseSize(heap) + os_getUseStart(heap);
+MemAddr get_next_fit(Heap *heap, size_t size, MemAddr start) {
+	os_enterCriticalSection();
+	
+	MemAddr iter_start = start - os_getUseStart(heap);
+	MemAddr iter_end   = (os_getUseSize(heap) - 1 + iter_start) % os_getUseSize(heap); 
     MemAddr current_candidate = 0;
 
-    for (volatile MemAddr addr = start; addr < end; addr++) {
+	for (MemAddr iter = iter_start; iter != iter_end; iter = (iter+1) % os_getUseSize(heap)) {
+		MemAddr addr = iter + os_getUseStart(heap);
+		if (iter == 0)
+			current_candidate = 0;
+		
         if (os_getMapEntry(heap, addr) == 0) {
             if (current_candidate == 0)
                 current_candidate = addr;
@@ -47,45 +52,23 @@ MemAddr os_Memory_FirstFit(Heap *heap, size_t size) {
 }
 
 void setNextFitStart(Heap* heap, MemAddr last_time, uint16_t size){
-	next_fit_start = last_time + size;
-	if(!isValidUseAddress(heap, next_fit_start)){
-		next_fit_start = 0;
+	heap->last_next_fit = last_time + size;
+	if(!isValidUseAddress(heap, heap->last_next_fit)){
+		heap->last_next_fit = 0;
 	}
 }
 
-MemAddr os_Memory_NextFit(Heap *heap, size_t size){
+MemAddr os_Memory_FirstFit(Heap *heap, size_t size) {
+	return get_next_fit(heap, size, os_getUseStart(heap));
+}
+
+MemAddr os_Memory_NextFit(Heap *heap, size_t size) {
 	os_enterCriticalSection();
-	if(next_fit_start == 0){ // Next Fit has never been called or we left off at the last chunk
-		MemAddr addr = os_Memory_FirstFit(heap, size); // Next Fit degenerates to First Fit in this case
-		if(addr != 0){
-			/* setNextFitStart should only be called if there really is allocable memory
-			 * to avoid inconsistency.
-             */
-		//    setNextFitStart(heap, addr, os_getChunkSizeUnrestricted(heap, addr, false));
-		}
-		os_leaveCriticalSection();
-		return addr;
-	} else {
-		MemAddr iter = next_fit_start; // Pick up where it left off
-		while(isValidUseAddress(heap, iter)){
-	/*		uint16_t iter_chunk_size = os_getChunkSizeUnrestricted(heap, iter, false);
-			if(os_getOwnerOfChunk(heap, iter) == 0 && iter_chunk_size >= size){ // We can choose this
-				setNextFitStart(heap, iter, iter_chunk_size);
-				os_leaveCriticalSection();
-				return iter;
-			} else {
-				iter += iter_chunk_size; // Try the next chunk
-			} */
-		}
-	}
-	// If the code ever reaches here, it means that there's no free space
-	// after the current next_fit_start can be found. The strategy degenerates
-	// to First Fit.
-	MemAddr addr = os_Memory_FirstFit(heap, size);
-	/*uint16_t addr_chunk_size = os_getChunkSizeUnrestricted(heap, addr, false);
-	if(addr != 0){
-	    setNextFitStart(heap, addr, addr_chunk_size);
-	}*/
+	if (heap->last_next_fit == 0)
+		heap->last_next_fit = os_getUseStart(heap);
+	
+	MemAddr addr = get_next_fit(heap, size, heap->last_next_fit);
+	setNextFitStart(heap, addr, size);
 	os_leaveCriticalSection();
 	return addr;
 }
