@@ -351,7 +351,7 @@ MemAddr os_realloc(Heap* heap, MemAddr addr, uint16_t size) {
 		heap->allocFrameStart[owner] = first_addr;
 	else {
 		MemAddr iter = addr;
-		while (isValidUseAddress(iter) && os_getMapEntry(heap, iter) != owner) {iter++;}
+		while (isValidUseAddress(heap, iter) && os_getMapEntry(heap, iter) != owner) {iter++;}
 		heap->allocFrameStart[owner] = iter;
 	}
 	
@@ -359,7 +359,7 @@ MemAddr os_realloc(Heap* heap, MemAddr addr, uint16_t size) {
 		heap->allocFrameEnd[owner] = first_addr + size;
 	else {
 		MemAddr iter = addr + cur_size;
-		while (isValidUseAddress(iter) && os_getMapEntry(heap, iter) != owner) {iter--;}
+		while (isValidUseAddress(heap, iter) && os_getMapEntry(heap, iter) != owner) {iter--;}
 		heap->allocFrameEnd[owner] = iter;
 	}
     
