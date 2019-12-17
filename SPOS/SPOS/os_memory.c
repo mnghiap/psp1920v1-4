@@ -272,21 +272,17 @@ MemAddr os_malloc(Heap *heap, size_t size){
 }
 
 MemAddr os_realloc(Heap* heap, MemAddr addr, uint16_t size) {
-	/*if (r_size >= missing)  // enough room to right
-	to_right = missing;
-	else if (l_size >= missing)  // enough room to left
-	to_left = missing;
-	else if (l_size + r_size >= missing) {  // enough room to left+right
-	to_left = l_size;
-	to_right = missing - l_size;
-	} else  // need to move
-	move = true;*/
-	
 	os_enterCriticalSection();
 	
 	addr = os_getFirstByteOfChunk(heap, addr);
 	MemAddr first_addr = addr;
 	ProcessID owner = os_getOwnerOfChunk(heap, addr);
+	
+	if (owner != os_getCurrentProc()) {
+		os_error("realloc: Mem. not from cur. proc.");
+		os_leaveCriticalSection();
+		return 0;
+	}
 	
 	uint16_t cur_size = os_getChunkSize(heap, addr);
 	if (size == cur_size) {
@@ -348,27 +344,24 @@ MemAddr os_realloc(Heap* heap, MemAddr addr, uint16_t size) {
 		}
 	}
 	
-	
-	
-	
-	/* There are just too many (edge) cases here to consider.
-	 * Iterating from both ends of the heap works, although it's
-	 * not the most efficient solution. */
-	/*for(MemAddr frame_start = heap->use_start; frame_start <= first_addr; ){
-		if(os_getOwnerOfChunk(heap, frame_start) == owner){ 
-			heap->allocFrameStart[owner] = frame_start;
-			break;
-		}
-		frame_start += os_getChunkSizeUnrestrictedWithZeroMaxSize(heap, frame_start, false, -1);
+	// cases:
+	//   1. new is in front of old
+	//   2. old is in front of new -> search
+	if (first_addr <= addr)
+		heap->allocFrameStart[owner] = first_addr;
+	else {
+		MemAddr iter = addr;
+		while (isValidUseAddress(iter) && os_getMapEntry(heap, iter) != owner) {iter++;}
+		heap->allocFrameStart[owner] = iter;
 	}
 	
-	for(MemAddr frame_end = heap->use_start + heap->use_size - 1; frame_end >= first_addr; ){
-		if(os_getOwnerOfChunk(heap, frame_end) == owner){ 
-			heap->allocFrameEnd[owner] = frame_end;
-			break;
-		}
-		frame_end -= os_getChunkSizeUnrestrictedWithZeroMaxSize(heap, frame_end, false, -1);
-	}*/
+	if (first_addr + size >= addr + cur_size)
+		heap->allocFrameEnd[owner] = first_addr + size;
+	else {
+		MemAddr iter = addr + cur_size;
+		while (isValidUseAddress(iter) && os_getMapEntry(heap, iter) != owner) {iter--;}
+		heap->allocFrameEnd[owner] = iter;
+	}
     
     os_leaveCriticalSection();
     return first_addr;
