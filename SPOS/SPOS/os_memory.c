@@ -347,6 +347,7 @@ MemAddr os_realloc(Heap* heap, MemAddr addr, uint16_t size) {
 	// cases:
 	//   1. new is in front of old
 	//   2. old is in front of new -> search
+	// TODO: untested
 	if (first_addr <= addr)
 		heap->allocFrameStart[owner] = first_addr;
 	else {
