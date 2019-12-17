@@ -218,6 +218,9 @@ void os_memcpy(Heap *heap_from, MemAddr from, Heap *heap_to, MemAddr to, uint16_
         return;
     }
 
+	if (heap_from == heap_to && from == to)
+		return;
+
     os_enterCriticalSection();
     for (uint16_t i = 0; i < n; i++) {
         heap_to->driver->write(
@@ -269,69 +272,94 @@ MemAddr os_malloc(Heap *heap, size_t size){
 }
 
 MemAddr os_realloc(Heap* heap, MemAddr addr, uint16_t size) {
-    uint16_t cur_size = os_getChunkSize(heap, addr);
-    if (cur_size == size || addr <= 0)
-        return 0;
-
-    ProcessID owner = os_getCurrentProc();
-    if (owner != os_getOwnerOfChunk(heap, addr)) {
-        os_errorPStr("realloc: proc. not own.");
-        return 0;
-    }
-
-    os_enterCriticalSection();
-    MemAddr first_addr = os_getFirstByteOfChunk(heap, addr);
-    if (size < cur_size) {  // shrinking
-        uint16_t missing = cur_size - size;
-        MemAddr last = first_addr + size;
-        for (uint16_t i =0; i<missing; i++)
-            os_setMapEntry(heap, last + i, 0x0);
-    } else {  // enlarging
-        uint16_t missing = size - cur_size;
-        MemAddr start_a = first_addr;
-        MemAddr end_a = first_addr + size; 
-        uint16_t to_left, to_right = to_left = 0;
-        bool move = false;
-
-        {
-            uint16_t l_size = os_getChunkSizeUnrestrictedWithZeroMaxSize(heap, first_addr - 1, false, missing);
-            uint16_t r_size = os_getChunkSizeUnrestrictedWithZeroMaxSize(heap, first_addr + cur_size, false, missing);
-            if (r_size >= missing)  // enough room to right
-                to_right = missing;
-            else if (l_size >= missing)  // enough room to left
-                to_left = missing;
-            else if (l_size + r_size >= missing) {  // enough room to left+right
-                to_left = l_size;
-                to_right = missing - l_size;
-            } else  // need to move
-                move = true;
-        }
-
-        if (!move) {
-            // expand left
-            for (uint16_t i = 0; i < to_left; i++)
-                os_setMapEntry(heap, start_a - i, 0xF);
-            os_setMapEntry(heap, start_a-to_left, owner);
-            first_addr = start_a-to_left;
-
-            // expand right
-            for (uint16_t i = 0; i < to_right; i++)
-                os_setMapEntry(heap, end_a + i, 0xF);
-        } else {
-            MemAddr addr = os_malloc(heap, size);
-            os_memcpy(heap, first_addr, heap, addr, cur_size);
-            first_addr = addr;
-        }
-    }
+	/*if (r_size >= missing)  // enough room to right
+	to_right = missing;
+	else if (l_size >= missing)  // enough room to left
+	to_left = missing;
+	else if (l_size + r_size >= missing) {  // enough room to left+right
+	to_left = l_size;
+	to_right = missing - l_size;
+	} else  // need to move
+	move = true;*/
+	
+	os_enterCriticalSection();
+	
+	addr = os_getFirstByteOfChunk(heap, addr);
+	MemAddr first_addr = addr;
+	ProcessID owner = os_getOwnerOfChunk(heap, addr);
+	
+	uint16_t cur_size = os_getChunkSize(heap, addr);
+	if (size == cur_size) {
+		os_leaveCriticalSection();
+		return addr;
+	} else if (size < cur_size) {  // shrinking
+		volatile uint16_t missing = cur_size - size;
+		for (uint16_t i = 1; i <= missing; i++)
+			os_setMapEntry(heap, addr + cur_size - i, 0x0);
+	}  else {
+		volatile uint16_t missing = size - cur_size;
+		volatile uint16_t to_left, to_right = to_left = 0;
+		volatile bool move = false;
+		
+		{
+			uint16_t r_size = 0;
+			if (isValidUseAddress(heap, addr + cur_size) && os_getMapEntry(heap, addr + cur_size) == 0)
+				r_size = os_getChunkSizeUnrestrictedWithZeroMaxSize(heap, addr + cur_size, false, missing);
+				
+			if (r_size >= missing)  // enough room to the right 
+				to_right = missing;
+			else {
+				uint16_t l_size = 0;
+				if (isValidUseAddress(heap, addr - 1) && os_getMapEntry(heap, addr - 1) == 0)
+					l_size = os_getChunkSizeUnrestrictedWithZeroMaxSize(heap, addr - 1, false, -1);
+				
+				if (l_size >= missing) {
+					to_left = l_size;
+				} else if (l_size + r_size >= missing) {
+					to_left = l_size;
+					to_right = missing - l_size;
+				} else  // need to move
+					move = true;					
+			}
+		}
+			
+		
+		if (!move) {
+			for (uint16_t i = 0; i < to_left; i++)
+				os_setMapEntry(heap, addr - i, 0xF);
+			os_setMapEntry(heap, addr - to_left, owner);
+			first_addr -= to_left;
+			
+			os_memcpy(heap, addr, heap, first_addr, cur_size);
+		
+			if (to_left >= missing)	{ // need to remove smt.
+				for (uint16_t i = 0; i < addr + cur_size - (first_addr + size); i++) {
+					os_setMapEntry(heap, first_addr + size + i, 0x0);
+				}
+			} else {
+				for (uint16_t i = 0; i < to_right; i++)
+					os_setMapEntry(heap, addr + cur_size + i, 0xF);
+			}	
+		} else {
+			// move chunk to new allocation
+			first_addr = os_malloc(heap, size);
+			os_memcpy(heap, addr, heap, first_addr, cur_size);
+			os_free(heap, addr);
+		}
+	}
+	
+	
+	
+	
 	/* There are just too many (edge) cases here to consider.
 	 * Iterating from both ends of the heap works, although it's
 	 * not the most efficient solution. */
-	for(MemAddr frame_start = heap->use_start; frame_start <= first_addr; ){
+	/*for(MemAddr frame_start = heap->use_start; frame_start <= first_addr; ){
 		if(os_getOwnerOfChunk(heap, frame_start) == owner){ 
 			heap->allocFrameStart[owner] = frame_start;
 			break;
 		}
-		frame_start += os_getChunkSizeUnrestricted(heap, frame_start, false);
+		frame_start += os_getChunkSizeUnrestrictedWithZeroMaxSize(heap, frame_start, false, -1);
 	}
 	
 	for(MemAddr frame_end = heap->use_start + heap->use_size - 1; frame_end >= first_addr; ){
@@ -339,8 +367,8 @@ MemAddr os_realloc(Heap* heap, MemAddr addr, uint16_t size) {
 			heap->allocFrameEnd[owner] = frame_end;
 			break;
 		}
-		frame_end -= os_getChunkSizeUnrestricted(heap, frame_end, false);
-	}
+		frame_end -= os_getChunkSizeUnrestrictedWithZeroMaxSize(heap, frame_end, false, -1);
+	}*/
     
     os_leaveCriticalSection();
     return first_addr;
